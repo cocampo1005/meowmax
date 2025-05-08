@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary-light-purple: #f9f4ff; /* Primary background light purple */
+  --color-primary-dark-purple: #4e2c62; /* Primary dark purple for text */
+  --color-secondary-purple: #8764b5; /* Secondary purple for darker backgrounds */
+  --color-tertiary-purple: #d8cbe6; /* Tertiary purple for lighter purple backgrounds */
+  --color-disabled-purple: #75657e; /* Disabled purple for disabled buttons */
+  --color-accent-purple: #631c8c; /* Accent purple for buttons */
+  --color-primary-white: #ffffff; /*Primary light for text */
+  --color-error-red: #f292a7; /*Secondary pink for error backgrounds */
+  --color-success-green: #95cf8a; /* Success green for success messages */
+}
+
+body {
+  background-color: var(--color-primary-light-purple);
+  color: var(--color-primary-dark-purple);
+}
