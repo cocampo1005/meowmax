@@ -1,10 +1,11 @@
 import { useState, useRef } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "../firebase";
 import { LogoVertical } from "../svgs/Logos";
 import { useNavigate } from "react-router-dom";
+import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 
-export default function Login() {
+export default function Signup() {
   const [email, setEmail] = useState("");
   const [pin, setPin] = useState(["", "", "", ""]);
   const [error, setError] = useState("");
@@ -25,12 +26,30 @@ export default function Login() {
     }
   };
 
-  const handleLogin = async (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
     const password = `MM${pin.join("")}`;
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const uid = userCredential.user.uid;
+
+      await setDoc(doc(db, "users", uid), {
+        email,
+        firstName: "",
+        lastName: "",
+        phone: "",
+        address: "",
+        role: "trapper",
+        notificationsEnabled: false,
+        fcmToken: [],
+        createdAt: serverTimestamp(),
+        isActive: true,
+      });
       navigate("/");
     } catch (err) {
       setError(err.message);
@@ -43,7 +62,7 @@ export default function Login() {
       <p className="mt-[-10px] text-secondary-purple font-semibold text-sm">
         Cat Solutions 305
       </p>
-      <form onSubmit={handleLogin} className="flex flex-col gap-4 p-8 w-full">
+      <form onSubmit={handleSignup} className="flex flex-col gap-4 p-8 w-full">
         <input
           className="input"
           type="email"
@@ -66,7 +85,7 @@ export default function Login() {
         </div>
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <button className="button" type="submit">
-          Log In
+          Sign Up
         </button>
       </form>
     </div>

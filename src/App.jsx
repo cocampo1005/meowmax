@@ -1,12 +1,27 @@
+import { Route, Routes } from "react-router-dom";
+import ProtectedRoute from "./pages/ProtectedRoute";
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import Appointments from "./pages/Appointments";
+import BookAppointment from "./pages/BookAppointment";
+import Profile from "./pages/Profile";
+
 function App() {
   return (
-    <>
-      <div className="flex-1 flex items-center justify-center h-screen bg-gradient-to-b from-primary-light-purple to-primary-dark-purple">
-        <h1 className="text-8xl bg-primary-white rounded-2xl p-8 text-primary-dark-purple">
-          Hello World!
-        </h1>
-      </div>
-    </>
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+
+      {/* Protected Routes */}
+      <Route element={<ProtectedRoute />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/appointments" element={<Appointments />} />
+        <Route path="/book-appointment" element={<BookAppointment />} />
+        <Route path="/profile" element={<Profile />} />
+      </Route>
+    </Routes>
   );
 }
 
