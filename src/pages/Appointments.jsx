@@ -6,19 +6,24 @@ import {
   where,
   orderBy,
   getDocs,
-  Timestamp, // Import Timestamp
+  Timestamp,
+  deleteDoc, // Import deleteDoc
+  doc, // Import doc
+  writeBatch, // Import writeBatch for batch deletions
 } from "firebase/firestore";
-import { db } from "../firebase"; // Import your Firestore instance
-import { useAuth } from "../contexts/AuthContext"; // Import your AuthContext
-import LoadingSpinner from "../components/LoadingSpinner"; // Assuming you have a spinner component
-import { Link } from "react-router-dom"; // For the Book Appointment button
+import { db } from "../firebase";
+import { useAuth } from "../contexts/AuthContext";
+import LoadingSpinner from "../components/LoadingSpinner";
+import { Link } from "react-router-dom";
 import {
   AppointmentListItemIcon,
   ChevronDown,
   ChevronUp,
   LocationIcon,
+  NotesIcon,
   ServiceIcon,
 } from "../svgs/Icons";
+import ConfirmationModal from "../components/ConfirmationModal"; // Import the ConfirmationModal
 
 // Define clinic data (Replace with fetching from Firestore if needed)
 const CLINICS = [
@@ -28,52 +33,53 @@ const CLINICS = [
 ];
 
 export default function Appointments() {
-  const { currentUser } = useAuth(); // Get the current user from AuthContext
-  const [appointments, setAppointments] = useState([]); // State to hold the fetched appointments
-  const [loading, setLoading] = useState(true); // State to manage loading status
-  const [view, setView] = useState("upcoming"); // State to toggle between 'upcoming' and 'history'
-  // State to track the key of the single expanded group, or null if none expanded
+  const { currentUser } = useAuth();
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [view, setView] = useState("upcoming");
   const [expandedGroupKey, setExpandedGroupKey] = useState(null);
+  const [expandedAppointmentId, setExpandedAppointmentId] = useState(null); // State to track the expanded individual appointment
+  const [showCancelModal, setShowCancelModal] = useState(false); // State for individual cancel modal
+  const [appointmentToCancel, setAppointmentToCancel] = useState(null); // State to hold appointment details for cancellation
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false); // State for delete all modal
+  const [groupToDelete, setGroupToDelete] = useState(null); // State to hold group details for deletion
 
   // Function to fetch appointments from Firestore
   const fetchAppointments = async (userId, currentView) => {
-    setLoading(true); // Set loading to true before fetching
+    setLoading(true);
     try {
       const appointmentsCollectionRef = collection(db, "appointments");
       let q;
 
-      // Use Timestamp.now() for accurate comparison with Firestore Timestamps
       const nowTimestamp = Timestamp.now();
 
-      // Construct the query based on the selected view
       if (currentView === "upcoming") {
         q = query(
           appointmentsCollectionRef,
-          where("userId", "==", userId), // Filter by the current user's ID
-          where("appointmentTime", ">=", nowTimestamp), // Use Timestamp.now() for upcoming
-          orderBy("appointmentTime", "asc") // Order by time ascending for upcoming
+          where("userId", "==", userId),
+          where("appointmentTime", ">=", nowTimestamp),
+          orderBy("appointmentTime", "asc")
         );
       } else {
-        // currentView === 'history'
         q = query(
           appointmentsCollectionRef,
-          where("userId", "==", userId), // Filter by the current user's ID
-          where("appointmentTime", "<", nowTimestamp), // Use Timestamp.now() for history
-          orderBy("appointmentTime", "desc") // Order by time descending for history (most recent first)
+          where("userId", "==", userId),
+          where("appointmentTime", "<", nowTimestamp),
+          orderBy("appointmentTime", "desc")
         );
       }
 
-      const querySnapshot = await getDocs(q); // Execute the query
+      const querySnapshot = await getDocs(q);
       const fetchedAppointments = querySnapshot.docs.map((doc) => ({
-        id: doc.id, // Include the document ID
-        ...doc.data(), // Include all other fields from the document
+        id: doc.id,
+        ...doc.data(),
       }));
 
-      setAppointments(fetchedAppointments); // Update the appointments state
-      setLoading(false); // Set loading to false after fetching
+      setAppointments(fetchedAppointments);
+      setLoading(false);
     } catch (error) {
       console.error("Error fetching appointments:", error);
-      setLoading(false); // Set loading to false even if there's an error
+      setLoading(false);
       // TODO: Display an error message to the user
     }
   };
@@ -83,17 +89,15 @@ export default function Appointments() {
     if (currentUser) {
       fetchAppointments(currentUser.uid, view);
     }
-    // Reset expanded state when view changes
-    setExpandedGroupKey(null); // Collapse all cards when switching views
-  }, [currentUser, view]); // Re-run effect if currentUser or view changes
+    setExpandedGroupKey(null);
+    setExpandedAppointmentId(null); // Reset expanded individual appointment when view changes
+  }, [currentUser, view]);
 
-  // Function to group appointments by date AND clinic from an already sorted list
+  // Function to group appointments by date AND clinic using a map and sort by service type
   const groupAppointmentsByDateAndClinic = (appointmentsList) => {
-    const grouped = [];
-    let currentGroup = null;
+    const groupedMap = new Map();
 
     appointmentsList.forEach((appointment) => {
-      // Ensure appointmentTime is a Timestamp and clinicAddress exists
       if (
         !appointment.appointmentTime ||
         !appointment.appointmentTime.toDate ||
@@ -103,7 +107,7 @@ export default function Appointments() {
           "Skipping appointment with missing date or clinic:",
           appointment
         );
-        return; // Skip appointments with invalid data
+        return;
       }
 
       const appointmentDate = appointment.appointmentTime.toDate(); // Get the Date object
@@ -111,23 +115,22 @@ export default function Appointments() {
       const dateKey = `${appointmentDate.getFullYear()}-${appointmentDate.getMonth()}-${appointmentDate.getDate()}`;
       const clinicAddress = appointment.clinicAddress;
 
-      // Check if this appointment belongs to the current group
-      if (
-        currentGroup &&
-        currentGroup.dateKey === dateKey &&
-        currentGroup.clinicAddress === clinicAddress
-      ) {
-        // Add individual appointment to the current group's appointments list
-        currentGroup.appointments.push(appointment);
-        // Update counts for the group summary
+      // Create a unique key for the group (Date + Clinic Address)
+      const groupKey = `${dateKey}-${clinicAddress}`;
+
+      if (groupedMap.has(groupKey)) {
+        // If the group already exists, add the appointment to its list
+        const existingGroup = groupedMap.get(groupKey);
+        existingGroup.appointments.push(appointment);
+        // Update counts
         if (appointment.serviceType === "TNVR") {
-          currentGroup.tnvrCount++;
+          existingGroup.tnvrCount++;
         } else if (appointment.serviceType === "Foster") {
-          currentGroup.fosterCount++;
+          existingGroup.fosterCount++;
         }
       } else {
-        // Start a new group
-        currentGroup = {
+        // If the group doesn't exist, create a new group object
+        const newGroup = {
           dateKey: dateKey, // Key for grouping
           displayDate: appointmentDate, // Date object for formatting
           clinicAddress: clinicAddress,
@@ -138,37 +141,140 @@ export default function Appointments() {
           fosterCount: appointment.serviceType === "Foster" ? 1 : 0,
           appointments: [appointment], // Start a list of individual appointments for this group
         };
-        grouped.push(currentGroup);
+        groupedMap.set(groupKey, newGroup);
       }
     });
 
-    return grouped; // The input list is already sorted by the fetchAppointments query
+    // Convert the map values to an array and sort by date for consistent display order
+    const groupedArray = Array.from(groupedMap.values());
+
+    // Sort the groups by date
+    groupedArray.sort(
+      (a, b) => a.displayDate.getTime() - b.displayDate.getTime()
+    );
+
+    // Sort the appointments *within* each group by service type (TNVR before Foster)
+    groupedArray.forEach((group) => {
+      group.appointments.sort((a, b) => {
+        if (a.serviceType === "TNVR" && b.serviceType !== "TNVR") {
+          return -1; // TNVR comes first
+        }
+        if (a.serviceType !== "TNVR" && b.serviceType === "TNVR") {
+          return 1; // TNVR comes first
+        }
+        // If both are the same type or neither is TNVR/Foster, maintain original order (or sort by another criteria if needed)
+        return 0;
+      });
+    });
+
+    return groupedArray;
   };
 
   // Function to toggle expanded state of a single group card
-  const toggleExpanded = (groupKey) => {
-    setExpandedGroupKey((prevKey) => {
-      // If the clicked card is already the expanded one, collapse it (set to null)
-      // Otherwise, expand the clicked card (set state to groupKey)
-      return prevKey === groupKey ? null : groupKey;
-    });
+  const toggleExpandedGroup = (groupKey) => {
+    setExpandedGroupKey((prevKey) => (prevKey === groupKey ? null : groupKey));
+    setExpandedAppointmentId(null); // Collapse any expanded individual appointment when collapsing the group
+  };
+
+  // Function to toggle expanded state of a single appointment within a group
+  const toggleExpandedAppointment = (appointmentId) => {
+    setExpandedAppointmentId((prevId) =>
+      prevId === appointmentId ? null : appointmentId
+    );
+  };
+
+  // Function to handle individual appointment cancellation
+  const handleCancelAppointment = (appointment) => {
+    setAppointmentToCancel(appointment);
+    setShowCancelModal(true);
+  };
+
+  // Function to confirm individual appointment cancellation
+  const confirmCancelAppointment = async () => {
+    if (appointmentToCancel) {
+      try {
+        await deleteDoc(doc(db, "appointments", appointmentToCancel.id));
+        // Remove the canceled appointment from the state
+        setAppointments(
+          appointments.filter(
+            (appointment) => appointment.id !== appointmentToCancel.id
+          )
+        );
+        console.log(
+          "Appointment successfully canceled:",
+          appointmentToCancel.id
+        );
+      } catch (error) {
+        console.error("Error canceling appointment:", error);
+        // TODO: Display an error message to the user
+      } finally {
+        setShowCancelModal(false);
+        setAppointmentToCancel(null);
+        setExpandedAppointmentId(null); // Collapse the individual appointment section
+      }
+    }
+  };
+
+  // Function to handle deleting all appointments for a date
+  const handleDeleteAllAppointments = (group) => {
+    setGroupToDelete(group);
+    setShowDeleteAllModal(true);
+  };
+
+  // Function to confirm deleting all appointments for a date
+  const confirmDeleteAllAppointments = async () => {
+    if (groupToDelete) {
+      try {
+        const batch = writeBatch(db);
+        groupToDelete.appointments.forEach((appointment) => {
+          const appointmentRef = doc(db, "appointments", appointment.id);
+          batch.delete(appointmentRef);
+        });
+        await batch.commit();
+
+        // Remove the deleted group's appointments from the state
+        setAppointments(
+          appointments.filter(
+            (appointment) =>
+              !groupToDelete.appointments.some(
+                (deletedApp) => deletedApp.id === appointment.id
+              )
+          )
+        );
+        console.log(
+          "All appointments for date and clinic successfully deleted:",
+          groupToDelete.dateKey,
+          groupToDelete.clinicAddress
+        );
+      } catch (error) {
+        console.error("Error deleting all appointments:", error);
+        // TODO: Display an error message to the user
+      } finally {
+        setShowDeleteAllModal(false);
+        setGroupToDelete(null);
+        setExpandedGroupKey(null); // Collapse the group card
+        setExpandedAppointmentId(null); // Ensure no individual appointment is expanded
+      }
+    }
+  };
+
+  // Function to close the modals
+  const handleCloseModal = () => {
+    setShowCancelModal(false);
+    setAppointmentToCancel(null);
+    setShowDeleteAllModal(false);
+    setGroupToDelete(null);
   };
 
   return (
-    // Main container: flex column to organize header, tabs, scrollable content, and fixed button
     <div className="px-4 py-24 flex flex-grow flex-col">
-      {/* Header (handled elsewhere) */}
-
-      {/* Toggle buttons for Upcoming/History */}
       <div className="fixed bg-primary-light-purple top-16 right-0 left-0 flex w-full p-4 flex-shrink-0">
-        {" "}
-        {/* flex-shrink-0 prevents tabs from shrinking */}
         <button
           className={`flex-1 text-center px-6 py-3 text-lg font-semibold transition-colors duration-200 rounded-tl-lg rounded-bl-lg
               ${
                 view === "upcoming"
-                  ? "bg-secondary-purple text-white shadow-md" // Active (Upcoming)
-                  : "bg-primary-white text-gray-700 hover:bg-gray-300" // Inactive (Upcoming)
+                  ? "bg-secondary-purple text-white shadow-md"
+                  : "bg-primary-white text-gray-700 hover:bg-gray-300"
               }`}
           onClick={() => setView("upcoming")}
         >
@@ -178,8 +284,8 @@ export default function Appointments() {
           className={`flex-1 text-center px-6 py-3 text-lg font-semibold transition-colors duration-200 rounded-tr-lg rounded-br-lg
               ${
                 view === "history"
-                  ? "bg-secondary-purple text-white shadow-md" // Active (History)
-                  : "bg-primary-white text-gray-700 hover:bg-gray-300" // Inactive (History)
+                  ? "bg-secondary-purple text-white shadow-md"
+                  : "bg-primary-white text-gray-700 hover:bg-gray-300"
               }`}
           onClick={() => setView("history")}
         >
@@ -187,16 +293,14 @@ export default function Appointments() {
         </button>
       </div>
 
-      {/* Scrollable Appointment List Container */}
       <div className="flex-grow overflow-visible">
-        {/* Display Loading Spinner or Appointments List */}
         {loading ? (
           <LoadingSpinner />
         ) : appointments.length > 0 ? (
           <div className="space-y-6">
             {groupAppointmentsByDateAndClinic(appointments).map((group) => {
               const groupKey = `${group.dateKey}-${group.clinicAddress}`;
-              const isExpanded = expandedGroupKey === groupKey;
+              const isGroupExpanded = expandedGroupKey === groupKey;
 
               const displayDate = group.displayDate;
               const isDateValid = !isNaN(displayDate.getTime());
@@ -216,12 +320,10 @@ export default function Appointments() {
                 : "";
 
               return (
-                // Card container
                 <div key={groupKey} className="bg-white rounded-lg shadow-md">
-                  {/* Card Header */}
                   {isDateValid && (
                     <div
-                      onClick={() => toggleExpanded(groupKey)}
+                      onClick={() => toggleExpandedGroup(groupKey)}
                       className="bg-secondary-purple cursor-pointer rounded-t-lg text-white px-4 py-3 flex justify-between items-center"
                     >
                       <div className="flex-grow">
@@ -230,21 +332,12 @@ export default function Appointments() {
                         </h3>
                         <span className="text-md">{dayOfWeek}</span>
                       </div>
-                      {/* Expand/Collapse Icon */}
                       <div className="flex items-center ml-2">
-                        {" "}
-                        {isExpanded ? (
-                          // Up Chevron when expanded
-                          <ChevronUp />
-                        ) : (
-                          // Down Chevron when collapsed
-                          <ChevronDown />
-                        )}
+                        {isGroupExpanded ? <ChevronUp /> : <ChevronDown />}
                       </div>
                     </div>
                   )}
 
-                  {/* Card Body */}
                   <div className="p-4 space-y-3">
                     <div className="flex gap-2 items-center text-gray-700 mb-2">
                       <LocationIcon />
@@ -252,42 +345,89 @@ export default function Appointments() {
                         {group.clinicName} - {group.clinicAddress}
                       </span>
                     </div>
-                    {isExpanded ? (
-                      // Expanded View: List of Individual Appointments (Service, Status)
-                      <ul className="space-y-3">
-                        {group.appointments.map((appointment) => (
-                          <li key={appointment.id}>
-                            <div className="flex justify-between items-center text-gray-700">
-                              <div className="flex w-full items-center justify-between">
-                                {/* Service Type Icon Placeholder */}
-                                {/* Replace with your actual icon component */}
-                                <div className="flex items-center">
-                                  <AppointmentListItemIcon />
-                                  <span className="mr-2">
-                                    {appointment.serviceType}
-                                  </span>
+                    {isGroupExpanded ? (
+                      <>
+                        <ul className="space-y-3">
+                          {group.appointments.map((appointment) => {
+                            const isAppointmentExpanded =
+                              expandedAppointmentId === appointment.id;
+                            return (
+                              <li
+                                key={appointment.id}
+                                className="border-b pb-3 last:border-b-0 last:pb-0"
+                              >
+                                <div
+                                  className="flex justify-between items-center text-gray-700 cursor-pointer"
+                                  onClick={() =>
+                                    toggleExpandedAppointment(appointment.id)
+                                  }
+                                >
+                                  <div className="flex w-full items-center justify-between">
+                                    <div className="flex items-center">
+                                      <AppointmentListItemIcon />
+                                      <span className="mr-2">
+                                        {appointment.serviceType}
+                                      </span>
+                                    </div>
+                                    {appointment.status && (
+                                      <span
+                                        className={`px-3 py-1 text-sm font-semibold rounded-full ${
+                                          appointment.status === "Completed"
+                                            ? "bg-tertiary-purple text-primary-dark-purple"
+                                            : appointment.status === "Canceled"
+                                            ? "bg-red-100 text-red-800"
+                                            : "bg-gray-100 text-gray-600"
+                                        }`}
+                                      >
+                                        {appointment.status}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
-                                {/* Status Pill */}
-                                {appointment.status && (
-                                  <span
-                                    className={`px-3 py-1 text-sm font-semibold rounded-full ${
-                                      appointment.status === "Completed"
-                                        ? "bg-tertiary-purple text-primary-dark-purple"
-                                        : appointment.status === "Canceled"
-                                        ? "bg-red-100 text-red-800"
-                                        : "bg-gray-100 text-gray-600"
-                                    }`}
-                                  >
-                                    {appointment.status}
-                                  </span>
+                                {isAppointmentExpanded && (
+                                  <div className="mt-3 p-3 bg-gray-100 rounded-md">
+                                    <div className="flex items-center text-gray-700 mb-2">
+                                      <NotesIcon />
+                                      <span className="ml-2 font-semibold">
+                                        Notes:
+                                      </span>
+                                    </div>
+                                    <p className="text-gray-600 ml-6 break-words">
+                                      {appointment.notes ||
+                                        "No notes provided."}
+                                    </p>
+                                    {view === "upcoming" &&
+                                      appointment.status !== "Canceled" && (
+                                        <div className="flex justify-end">
+                                          <button
+                                            className="mt-4 px-4 py-2 bg-error-red text-white rounded-lg hover:bg-error-red-hov text-sm font-semibold"
+                                            onClick={(e) => {
+                                              e.stopPropagation(); // Prevent the parent li click from toggling
+                                              handleCancelAppointment(
+                                                appointment
+                                              );
+                                            }}
+                                          >
+                                            Cancel Appointment
+                                          </button>
+                                        </div>
+                                      )}
+                                  </div>
                                 )}
-                              </div>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                        {view === "upcoming" && (
+                          <button
+                            className="mt-6 w-full px-4 py-2 bg-error-red text-white rounded-lg hover:bg-error-red-hov font-semibold"
+                            onClick={() => handleDeleteAllAppointments(group)}
+                          >
+                            Delete All Appointments for this Date
+                          </button>
+                        )}
+                      </>
                     ) : (
-                      // Condensed View: Booked Slots Summary (Default)
                       <div className="flex gap-2 text-gray-700">
                         <ServiceIcon />
                         {group.tnvrCount > 0 && (
@@ -320,14 +460,12 @@ export default function Appointments() {
             })}
           </div>
         ) : (
-          // Message if no appointments are found
           <div className="text-center text-gray-600 mt-8">
             No {view} appointments found.
           </div>
         )}
       </div>
 
-      {/* Book Appointment Button */}
       <div className="fixed bottom-16 left-0 right-0 p-4 bg-primary-light-purple z-40">
         <Link
           to="/book-appointment"
@@ -336,6 +474,33 @@ export default function Appointments() {
           Book Appointment
         </Link>
       </div>
+
+      {/* Individual Cancel Confirmation Modal */}
+      <ConfirmationModal
+        show={showCancelModal}
+        title="Confirm Cancellation"
+        message={`Are you sure you want to cancel this ${appointmentToCancel?.serviceType} appointment?`}
+        confirmButtonText="Yes, Cancel"
+        onConfirm={confirmCancelAppointment}
+        onCancel={handleCloseModal}
+      />
+
+      {/* Delete All Confirmation Modal */}
+      <ConfirmationModal
+        show={showDeleteAllModal}
+        title="Confirm Deletion"
+        message={`Are you sure you want to delete all appointments for ${groupToDelete?.displayDate.toLocaleDateString(
+          "en-US",
+          {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          }
+        )} at ${groupToDelete?.clinicName}? This action cannot be undone.`}
+        confirmButtonText="Yes, Delete All"
+        onConfirm={confirmDeleteAllAppointments}
+        onCancel={handleCloseModal}
+      />
     </div>
   );
 }
