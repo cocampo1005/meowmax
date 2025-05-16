@@ -2,6 +2,7 @@ import { useAuth } from "../contexts/AuthContext"; // Import your useAuth hook
 import { useNavigate } from "react-router-dom"; // To redirect after logout
 import LoadingSpinner from "../components/LoadingSpinner"; // Adjust path as needed
 import { auth } from "../firebase"; // Import your firebase auth instance
+import { LogoutIcon } from "../svgs/Icons";
 
 export default function Profile() {
   const { currentUser, loading } = useAuth(); // Get currentUser and loading state from useAuth
@@ -11,6 +12,7 @@ export default function Profile() {
   const handleLogout = async () => {
     try {
       await auth.signOut(); // Sign out the user using Firebase auth
+      console.log("User logged out successfully");
       navigate("/login"); // Redirect to the login page after logout
       // Or navigate to '/' if your home page is accessible without login
     } catch (error) {
@@ -41,7 +43,9 @@ export default function Profile() {
       {" "}
       {/* Added padding top */}
       <h1 className="text-2xl font-bold mb-6 text-center text-accent-purple">
-        {`${trapperNumber} - ${firstName} ${lastName}`}
+        {trapperNumber
+          ? `${trapperNumber} - ${firstName} ${lastName}`
+          : `${firstName} ${lastName}`}
       </h1>
       <div className="bg-white p-6 rounded-lg shadow-md space-y-4">
         {/* User Information Display */}
@@ -66,11 +70,9 @@ export default function Profile() {
         <div className="pt-4 border-t border-gray-200">
           {" "}
           {/* Separator */}
-          <button
-            onClick={handleLogout}
-            className="w-full px-4 py-2 bg-error-red hover:bg-error-red-hov text-white rounded font-semibold"
-          >
-            Logout
+          <button onClick={handleLogout} className="red-button w-full">
+            <LogoutIcon />
+            <p>Logout</p>
           </button>
         </div>
       </div>

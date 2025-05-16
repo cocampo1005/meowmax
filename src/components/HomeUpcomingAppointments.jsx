@@ -197,18 +197,18 @@ export default function HomeUpcomingAppointments() {
 
                 {/* Right Appointment Summary Section */}
                 <div className="flex-grow p-3 text-gray-700 flex flex-col justify-center">
-                  <div className="flex gap-2 items-center text-sm mb-1">
-                    <LocationIcon /> {/* Adjust icon size/color */}
+                  {/* <div className="flex gap-2 items-center text-sm mb-1">
+                    <LocationIcon />
                     <span>
                       {group.clinicName} - {group.clinicAddress}
                     </span>
-                  </div>
-                  <div className="flex gap-2 items-center text-sm font-semibold">
-                    <ServiceIcon /> {/* Adjust icon size/color */}
+                  </div> */}
+                  <div className="flex gap-2 items-center justify-center text-lg">
+                    {/* <ServiceIcon /> */}
                     {group.tnvrCount > 0 && (
                       <>
                         TNVR{" "}
-                        <span className="ml-1 font-bold text-primary-dark-purple">
+                        <span className="ml-1 font-bold text-secondary-purple">
                           {group.tnvrCount}
                         </span>
                         {group.fosterCount > 0 && (
@@ -220,7 +220,7 @@ export default function HomeUpcomingAppointments() {
                     {group.fosterCount > 0 && (
                       <>
                         Foster{" "}
-                        <span className="ml-1 font-bold text-primary-dark-purple">
+                        <span className="ml-1 font-bold text-secondary-purple">
                           {group.fosterCount}
                         </span>
                       </>

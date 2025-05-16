@@ -25,12 +25,12 @@ import {
 } from "../svgs/Icons";
 import ConfirmationModal from "../components/ConfirmationModal"; // Import the ConfirmationModal
 
-// Define clinic data (Replace with fetching from Firestore if needed)
-const CLINICS = [
-  { id: "clinicA", name: "Downtown Clinic", address: "123 Main St" },
-  { id: "clinicB", name: "Uptown Clinic", address: "456 Oak Ave" },
-  // Add more clinics as needed
-];
+// Clinic Data
+const CLINIC = {
+  id: "clinicA",
+  name: "Street Cat Clinic",
+  address: "500 NE 167th St, Miami, FL 33162",
+};
 
 export default function Appointments() {
   const { currentUser } = useAuth();
@@ -131,12 +131,13 @@ export default function Appointments() {
       } else {
         // If the group doesn't exist, create a new group object
         const newGroup = {
-          dateKey: dateKey, // Key for grouping
-          displayDate: appointmentDate, // Date object for formatting
+          dateKey: dateKey,
+          displayDate: appointmentDate,
           clinicAddress: clinicAddress,
-          clinicName:
-            CLINICS.find((c) => c.address === clinicAddress)?.name ||
-            "Unknown Clinic",
+          // clinicName:
+          //   CLINICS.find((c) => c.address === clinicAddress)?.name ||
+          //   "Unknown Clinic",
+          clinicName: CLINIC.name,
           tnvrCount: appointment.serviceType === "TNVR" ? 1 : 0,
           fosterCount: appointment.serviceType === "Foster" ? 1 : 0,
           appointments: [appointment], // Start a list of individual appointments for this group
@@ -267,7 +268,7 @@ export default function Appointments() {
   };
 
   return (
-    <div className="px-4 py-24 flex flex-grow flex-col">
+    <div className="px-4 pt-24 pb-40 flex flex-grow flex-col">
       <div className="fixed bg-primary-light-purple top-16 right-0 left-0 flex w-full p-4 flex-shrink-0">
         <button
           className={`flex-1 text-center px-6 py-3 text-lg font-semibold transition-colors duration-200 rounded-tl-lg rounded-bl-lg
@@ -339,12 +340,12 @@ export default function Appointments() {
                   )}
 
                   <div className="p-4 space-y-3">
-                    <div className="flex gap-2 items-center text-gray-700 mb-2">
+                    {/* <div className="flex gap-2 items-center text-gray-700 mb-2">
                       <LocationIcon />
                       <span>
                         {group.clinicName} - {group.clinicAddress}
                       </span>
-                    </div>
+                    </div> */}
                     {isGroupExpanded ? (
                       <>
                         <ul className="space-y-3">
@@ -371,7 +372,7 @@ export default function Appointments() {
                                     </div>
                                     {appointment.status && (
                                       <span
-                                        className={`px-3 py-1 text-sm font-semibold rounded-full ${
+                                        className={`px-3 py-1 text-xs font-semibold rounded-full ${
                                           appointment.status === "Completed"
                                             ? "bg-tertiary-purple text-primary-dark-purple"
                                             : appointment.status === "Canceled"
@@ -400,7 +401,7 @@ export default function Appointments() {
                                       appointment.status !== "Canceled" && (
                                         <div className="flex justify-end">
                                           <button
-                                            className="mt-4 px-4 py-2 bg-error-red text-white rounded-lg hover:bg-error-red-hov text-sm font-semibold"
+                                            className="red-button"
                                             onClick={(e) => {
                                               e.stopPropagation(); // Prevent the parent li click from toggling
                                               handleCancelAppointment(
@@ -408,7 +409,7 @@ export default function Appointments() {
                                               );
                                             }}
                                           >
-                                            Cancel Appointment
+                                            Release Appointment
                                           </button>
                                         </div>
                                       )}
@@ -420,38 +421,40 @@ export default function Appointments() {
                         </ul>
                         {view === "upcoming" && (
                           <button
-                            className="mt-6 w-full px-4 py-2 bg-error-red text-white rounded-lg hover:bg-error-red-hov font-semibold"
+                            className="red-button text-sm w-full"
                             onClick={() => handleDeleteAllAppointments(group)}
                           >
-                            Delete All Appointments for this Date
+                            Release All Appointments for this Date
                           </button>
                         )}
                       </>
                     ) : (
-                      <div className="flex gap-2 text-gray-700">
-                        <ServiceIcon />
+                      <div className="flex gap-2 items-center justify-center text-lg">
+                        {/* <ServiceIcon /> */}
                         {group.tnvrCount > 0 && (
                           <>
-                            {" TNVR "}
-                            <span className="font-bold text-accent-purple">
+                            TNVR{" "}
+                            <span className="ml-1 font-bold text-secondary-purple">
                               {group.tnvrCount}
                             </span>
+                            {group.fosterCount > 0 && (
+                              <span className="mx-2">|</span>
+                            )}{" "}
+                            {/* Separator if both exist */}
                           </>
                         )}
-                        {group.tnvrCount > 0 && group.fosterCount > 0
-                          ? " "
-                          : ""}
                         {group.fosterCount > 0 && (
                           <>
-                            {" Foster "}
-                            <span className="font-bold text-accent-purple">
+                            Foster{" "}
+                            <span className="ml-1 font-bold text-secondary-purple">
                               {group.fosterCount}
                             </span>
                           </>
                         )}
                         {group.tnvrCount === 0 &&
                           group.fosterCount === 0 &&
-                          " None"}
+                          "No slots booked"}{" "}
+                        {/* Handle case with no slots */}
                       </div>
                     )}
                   </div>
@@ -467,10 +470,7 @@ export default function Appointments() {
       </div>
 
       <div className="fixed bottom-16 left-0 right-0 p-4 bg-primary-light-purple z-40">
-        <Link
-          to="/book-appointment"
-          className="button w-full text-center inline-block px-8 py-3 text-lg font-semibold"
-        >
+        <Link to="/book-appointment" className="button">
           Book Appointment
         </Link>
       </div>

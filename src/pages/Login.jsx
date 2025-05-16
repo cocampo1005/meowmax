@@ -1,10 +1,12 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 import { LogoVertical } from "../svgs/Logos";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Login() {
+  const { currentUser, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [pin, setPin] = useState(["", "", "", ""]);
   const [error, setError] = useState("");
@@ -31,11 +33,16 @@ export default function Login() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      navigate("/");
     } catch (err) {
       setError(err.message);
     }
   };
+
+  useEffect(() => {
+    if (!loading && currentUser) {
+      navigate("/"); // Redirect to home if logged in and not loading
+    }
+  }, [currentUser, loading, navigate]);
 
   return (
     <div className="flex flex-col items-center justify-center h-screen">

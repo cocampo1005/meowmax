@@ -10,6 +10,7 @@
   --color-primary-white: #ffffff; /*Primary light for text */
   --color-error-red: #f54c70; /* Red for errors canceling */
   --color-error-red-hov: #f292a7; /* Red for hover state */
+  --color-error-red-act: #e91e4a; /* Red for active state */
   --color-success-green: #95cf8a; /* Success green for success messages */
 }
 
@@ -51,7 +52,49 @@ body {
 .button:hover {
   background-color: var(--color-secondary-purple);
 }
+.button:active {
+  background-color: var(--color-primary-dark-purple);
+}
 .button:disabled {
   background-color: var(--color-disabled-purple);
   cursor: not-allowed;
+}
+
+.red-button {
+  background-color: var(--color-error-red);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--color-primary-white);
+  font-weight: 600;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  margin-top: 1rem;
+  transition: background-color 0.3s;
+}
+.red-button:hover {
+  background-color: var(--color-error-red-hov);
+}
+.red-button:active {
+  background-color: var(--color-error-red-act);
+}
+
+.gray-button {
+  background-color: oklch(92.8% 0.006 264.531);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: oklch(55.1% 0.027 264.364);
+  font-weight: 600;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  margin-top: 1rem;
+}
+.gray-button:hover {
+  background-color: oklch(70.7% 0.022 261.325);
+  color: var(--color-primary-white);
+}
+.gray-button:active {
+  background-color: oklch(50.2% 0.03 261.325);
+  color: var(--color-primary-white);
 }

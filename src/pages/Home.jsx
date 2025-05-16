@@ -21,10 +21,7 @@ export default function Home() {
       <div className="mt-8">
         {" "}
         {/* Add some top margin */}
-        <Link
-          to="/book-appointment"
-          className="button w-full text-center inline-block px-8 py-3 text-lg font-semibold"
-        >
+        <Link to="/book-appointment" className="button">
           Book Appointment
         </Link>
       </div>

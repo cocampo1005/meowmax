@@ -17,11 +17,12 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import { useNavigate } from "react-router-dom";
 import { SuccessIcon } from "../svgs/Icons";
 
-// Mock Clinic Data
-const CLINICS = [
-  { id: "clinicA", name: "Downtown Clinic", address: "123 Main St" },
-  { id: "clinicB", name: "Uptown Clinic", address: "456 Oak Ave" },
-];
+// Clinic Data
+const CLINIC = {
+  id: "clinicA",
+  name: "Street Cat Clinic",
+  address: "500 NE 167th St, Miami, FL 33162",
+};
 
 // Constants for slot capacity
 const TNVR_CAPACITY = 70;
@@ -31,9 +32,11 @@ export default function BookAppointmentPage() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
 
+  // I also removed slectedClinicId from the useEffect dependencies
+  // const [selectedClinicId, setSelectedClinicId] = useState("");
+
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
-  const [selectedClinicId, setSelectedClinicId] = useState("");
   const [availableSlots, setAvailableSlots] = useState({
     tnvr: TNVR_CAPACITY,
     foster: FOSTER_CAPACITY,
@@ -54,7 +57,8 @@ export default function BookAppointmentPage() {
 
   // Function to fetch available slots - Defined outside useEffect
   const fetchAvailableSlots = useCallback(async () => {
-    if (!selectedDate || !selectedClinicId) {
+    if (!selectedDate) {
+      // Changed from !selectedDate || !selectedClinicId
       // Reset available slots and quantities when date or clinic is cleared
       setAvailableSlots({ tnvr: TNVR_CAPACITY, foster: FOSTER_CAPACITY });
       setTnvrSlotsToBook(0);
@@ -93,8 +97,10 @@ export default function BookAppointmentPage() {
         where(
           "clinicAddress",
           "==",
-          CLINICS.find((c) => c.id === selectedClinicId)?.address || ""
-        ) // Filter by clinic address
+          // If they ever add more clinics, use this instead:
+          // CLINICS.find((c) => c.id === selectedClinicId)?.address || ""
+          CLINIC.address // Main and only clinic for now
+        )
       );
 
       const querySnapshot = await getDocs(q);
@@ -117,18 +123,18 @@ export default function BookAppointmentPage() {
     } catch (err) {
       console.error("Error fetching available slots:", err);
       setError("Failed to load available slots.");
-      setAvailableSlots({ tnvr: 0, foster: 0 }); // Set to 0 on error
+      setAvailableSlots({ tnvr: 0, foster: 0 });
     } finally {
       setLoadingSlots(false);
     }
-  }, [selectedDate, selectedClinicId]);
+  }, [selectedDate]);
 
-  // Fetch available slots when selectedDate or selectedClinicId changes
+  // Fetch available slots when selectedDate changes
   useEffect(() => {
     console.log(currentUser);
 
-    fetchAvailableSlots(); // Call the externally defined function
-  }, [selectedDate, selectedClinicId, fetchAvailableSlots]); // Add fetchAvailableSlots to dependency array
+    fetchAvailableSlots();
+  }, [selectedDate, fetchAvailableSlots]);
 
   // --- Calendar Logic ---
   const daysInMonth = (date) =>
@@ -149,6 +155,14 @@ export default function BookAppointmentPage() {
   };
   const calendarDays = generateCalendarDays(currentMonth);
 
+  const resetSelection = () => {
+    setSelectedDate(null);
+    // setSelectedClinicId("")
+    setAvailableSlots({ tnvr: TNVR_CAPACITY, foster: FOSTER_CAPACITY });
+    setTnvrSlotsToBook(0);
+    setFosterSlotsToBook(0);
+  };
+
   const goToPreviousMonth = () => {
     setCurrentMonth((prevMonth) => {
       const newMonth = new Date(
@@ -161,11 +175,7 @@ export default function BookAppointmentPage() {
         (selectedDate.getMonth() !== newMonth.getMonth() ||
           selectedDate.getFullYear() !== newMonth.getFullYear())
       ) {
-        setSelectedDate(null);
-        setSelectedClinicId("");
-        setAvailableSlots({ tnvr: TNVR_CAPACITY, foster: FOSTER_CAPACITY });
-        setTnvrSlotsToBook(0);
-        setFosterSlotsToBook(0);
+        resetSelection();
       }
       return newMonth;
     });
@@ -183,11 +193,7 @@ export default function BookAppointmentPage() {
         (selectedDate.getMonth() !== newMonth.getMonth() ||
           selectedDate.getFullYear() !== newMonth.getFullYear())
       ) {
-        setSelectedDate(null);
-        setSelectedClinicId("");
-        setAvailableSlots({ tnvr: TNVR_CAPACITY, foster: FOSTER_CAPACITY });
-        setTnvrSlotsToBook(0);
-        setFosterSlotsToBook(0);
+        resetSelection();
       }
       return newMonth;
     });
@@ -200,13 +206,22 @@ export default function BookAppointmentPage() {
       currentMonth.getMonth(),
       day
     );
-    // Prevent selecting past dates
-    if (date < new Date().setHours(0, 0, 0, 0)) {
-      console.log("Cannot select a past date.");
+    const dayOfWeek = date.getDay(); // 0 for Sunday, 1 for Monday, ..., 6 for Saturday
+
+    // Prevent selecting past dates and Thursday (4), Friday (5), Saturday (6)
+    if (
+      date < new Date().setHours(0, 0, 0, 0) ||
+      dayOfWeek === 4 ||
+      dayOfWeek === 5 ||
+      dayOfWeek === 6
+    ) {
+      console.log(
+        "Cannot select a past date or a day when the clinic is closed."
+      );
       return;
     }
     setSelectedDate(date);
-    setSelectedClinicId(""); // Reset clinic when date changes
+    // setSelectedClinicId("");
     setTnvrSlotsToBook(0);
     setFosterSlotsToBook(0);
   };
@@ -217,11 +232,11 @@ export default function BookAppointmentPage() {
     // Basic client-side validation
     if (
       !selectedDate ||
-      !selectedClinicId ||
+      // !selectedClinicId ||
       (!tnvrSlotsToBook && !fosterSlotsToBook) ||
       !currentUser
     ) {
-      setError("Please select a date, clinic, and at least one slot.");
+      setError("Please select a date, and at least one slot.");
       return;
     }
 
@@ -242,9 +257,12 @@ export default function BookAppointmentPage() {
       const appointmentTimestamp = Timestamp.fromDate(appointmentDateTime);
       const nowTimestamp = Timestamp.now();
 
-      const clinic = CLINICS.find((c) => c.id === selectedClinicId);
-      const clinicAddress = clinic?.address || "";
-      const clinicName = clinic?.name || "";
+      // const clinic = CLINICS.find((c) => c.id === selectedClinicId);
+      // const clinicAddress = clinic?.address || "";
+      // const clinicName = clinic?.name || "";
+
+      const clinicAddress = CLINIC.address;
+      const clinicName = CLINIC.name;
 
       if (!clinicAddress) {
         throw new Error("Selected clinic address not found.");
@@ -315,7 +333,7 @@ export default function BookAppointmentPage() {
 
       // Reset the form after successful booking
       setSelectedDate(null);
-      setSelectedClinicId("");
+      // setSelectedClinicId("");
       setTnvrSlotsToBook(0);
       setFosterSlotsToBook(0);
       setNotes("");
@@ -345,7 +363,7 @@ export default function BookAppointmentPage() {
     alreadyBookedFosterSlots + fosterSlotsToBook;
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto p-4 pb-24">
       <h1 className="text-2xl text-center text-accent-purple font-bold mb-4">
         Book Appointment
       </h1>
@@ -358,7 +376,7 @@ export default function BookAppointmentPage() {
         >
           &lt;
         </button>
-        <h2 className="text-xl text-accent-purple font-semibold">
+        <h2 className="text-xl text-accent-purple font-bold">
           {currentMonth.toLocaleString("default", {
             month: "long",
             year: "numeric",
@@ -385,46 +403,51 @@ export default function BookAppointmentPage() {
 
       {/* Calendar Grid (Days) */}
       <div className="grid grid-cols-7 gap-1 text-center">
-        {calendarDays.map((day, index) => (
-          <div
-            key={index}
-            className={`p-2 rounded cursor-pointer
-              ${day === null ? "bg-purple-100" : ""}
-              ${
-                day !== null &&
-                new Date(
+        {calendarDays.map((day, index) => {
+          const date =
+            day !== null
+              ? new Date(
                   currentMonth.getFullYear(),
                   currentMonth.getMonth(),
                   day
-                ) < new Date().setHours(0, 0, 0, 0)
-                  ? "text-gray-300 cursor-not-allowed"
-                  : ""
-              }
-              ${
-                selectedDate &&
-                day === selectedDate.getDate() &&
-                currentMonth.getMonth() === selectedDate.getMonth() &&
-                currentMonth.getFullYear() === selectedDate.getFullYear()
-                  ? "bg-accent-purple text-white font-bold"
-                  : day !== null &&
-                    new Date(
-                      currentMonth.getFullYear(),
-                      currentMonth.getMonth(),
-                      day
-                    ) >= new Date().setHours(0, 0, 0, 0)
-                  ? "hover:bg-gray-200"
-                  : ""
-              }
-            `}
-            onClick={() => handleDaySelect(day)}
-          >
-            {day}
-          </div>
-        ))}
+                )
+              : null;
+          const isPastDate = date && date < new Date().setHours(0, 0, 0, 0);
+          const dayOfWeek = date ? date.getDay() : null;
+          const isClinicClosed =
+            dayOfWeek === 4 || dayOfWeek === 5 || dayOfWeek === 6; // Thursday, Friday, Saturday
+
+          return (
+            <div
+              key={index}
+              className={`p-2 rounded cursor-pointer
+                ${day === null ? "bg-purple-100" : ""}
+                ${
+                  day !== null && (isPastDate || isClinicClosed)
+                    ? "text-gray-300 cursor-not-allowed"
+                    : ""
+                }
+                ${
+                  selectedDate &&
+                  day === selectedDate.getDate() &&
+                  currentMonth.getMonth() === selectedDate.getMonth() &&
+                  currentMonth.getFullYear() === selectedDate.getFullYear()
+                    ? "bg-accent-purple text-white font-bold"
+                    : day !== null && !isPastDate && !isClinicClosed
+                    ? "hover:bg-gray-200"
+                    : ""
+                }
+              `}
+              onClick={() => handleDaySelect(day)}
+            >
+              {day}
+            </div>
+          );
+        })}
       </div>
 
       {/* Clinic Selection */}
-      {selectedDate && (
+      {/* {selectedDate && (
         <div className="mt-8 p-4 bg-white rounded-lg shadow">
           <h3 className="text-lg text-accent-purple font-semibold mb-4">
             Select Clinic for {selectedDate.toLocaleDateString()}
@@ -442,14 +465,15 @@ export default function BookAppointmentPage() {
             ))}
           </select>
         </div>
-      )}
+      )} */}
 
       {/* Available Slots and Slot Quantity Selection */}
-      {selectedDate && selectedClinicId && (
+      {selectedDate && ( // Condition changed from selectedDate && selectedClinicId
         <div className="mt-4 p-4 bg-white rounded-lg shadow">
           <h3 className="text-lg text-accent-purple font-semibold mb-4">
             Available Slots for {selectedDate.toLocaleDateString()} at{" "}
-            {CLINICS.find((c) => c.id === selectedClinicId)?.name}
+            {/* {CLINICS.find((c) => c.id === selectedClinicId)?.name} */}
+            {CLINIC.name}
           </h3>
 
           {loadingSlots ? (
