@@ -1,6 +1,7 @@
 import LocationSVG from "../assets/icons/location-icon.svg";
 import ServiceSVG from "../assets/icons/service-icon.svg";
 import NotesSVG from "../assets/icons/notes-icon.svg";
+import SuccessSVG from "../assets/icons/success-icon.svg";
 
 export function LocationIcon() {
   return <img src={LocationSVG} alt="Location Icon" />;
@@ -12,6 +13,10 @@ export function ServiceIcon() {
 
 export function NotesIcon() {
   return <img src={NotesSVG} alt="Notes Icon" />;
+}
+
+export function SuccessIcon() {
+  return <img src={SuccessSVG} alt="Success Icon" />;
 }
 
 export function ChevronDown() {

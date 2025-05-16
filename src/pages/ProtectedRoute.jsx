@@ -23,7 +23,7 @@ export default function ProtectedRoute() {
         >
           <LogoHorizontal />
         </Link>
-        <div className="py-16 ">
+        <div className="py-16 h-screen">
           <Outlet />
         </div>
         <BottomNavBar />

@@ -15,6 +15,7 @@ import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useNavigate } from "react-router-dom";
+import { SuccessIcon } from "../svgs/Icons";
 
 // Mock Clinic Data
 const CLINICS = [
@@ -43,7 +44,6 @@ export default function BookAppointmentPage() {
   const [notes, setNotes] = useState("");
   const [bookingLoading, setBookingLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [trapperDetails, setTrapperDetails] = useState(null);
 
   // State for Confirmation Modal
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
@@ -55,7 +55,7 @@ export default function BookAppointmentPage() {
   // Function to fetch available slots - Defined outside useEffect
   const fetchAvailableSlots = useCallback(async () => {
     if (!selectedDate || !selectedClinicId) {
-      // Reset available slots and quantities when date/clinic is cleared
+      // Reset available slots and quantities when date or clinic is cleared
       setAvailableSlots({ tnvr: TNVR_CAPACITY, foster: FOSTER_CAPACITY });
       setTnvrSlotsToBook(0);
       setFosterSlotsToBook(0);
@@ -64,8 +64,8 @@ export default function BookAppointmentPage() {
 
     setLoadingSlots(true);
     setError(null);
-    setTnvrSlotsToBook(0); // Reset quantity when fetching new slots
-    setFosterSlotsToBook(0); // Reset quantity when fetching new slots
+    setTnvrSlotsToBook(0);
+    setFosterSlotsToBook(0);
 
     try {
       const startOfDay = new Date(
@@ -123,33 +123,10 @@ export default function BookAppointmentPage() {
     }
   }, [selectedDate, selectedClinicId]);
 
-  // Fetch Trapper Details on Load
-  useEffect(() => {
-    const fetchTrapperDetails = async () => {
-      if (currentUser) {
-        try {
-          const userDocRef = doc(db, "users", currentUser.uid);
-          const userDoc = await getDoc(userDocRef);
-          if (userDoc.exists()) {
-            setTrapperDetails(userDoc.data());
-          } else {
-            console.error(
-              "Trapper document not found for current user:",
-              currentUser.uid
-            );
-            setError("Could not load trapper details.");
-          }
-        } catch (err) {
-          console.error("Error fetching trapper details:", err);
-          setError("Failed to load trapper details.");
-        }
-      }
-    };
-    fetchTrapperDetails();
-  }, [currentUser]);
-
   // Fetch available slots when selectedDate or selectedClinicId changes
   useEffect(() => {
+    console.log(currentUser);
+
     fetchAvailableSlots(); // Call the externally defined function
   }, [selectedDate, selectedClinicId, fetchAvailableSlots]); // Add fetchAvailableSlots to dependency array
 
@@ -242,8 +219,7 @@ export default function BookAppointmentPage() {
       !selectedDate ||
       !selectedClinicId ||
       (!tnvrSlotsToBook && !fosterSlotsToBook) ||
-      !currentUser ||
-      !trapperDetails
+      !currentUser
     ) {
       setError("Please select a date, clinic, and at least one slot.");
       return;
@@ -261,10 +237,7 @@ export default function BookAppointmentPage() {
       const appointmentDateTime = new Date(
         selectedDate.getFullYear(),
         selectedDate.getMonth(),
-        selectedDate.getDate(),
-        9, // Using 9:00 AM as a fixed time
-        0,
-        0
+        selectedDate.getDate()
       );
       const appointmentTimestamp = Timestamp.fromDate(appointmentDateTime);
       const nowTimestamp = Timestamp.now();
@@ -278,15 +251,16 @@ export default function BookAppointmentPage() {
       }
 
       const appointmentsRef = collection(db, "appointments");
-      const bookedAppointmentDetailsList = []; // To collect details for confirmation
+      const bookedAppointmentDetailsList = [];
 
       // Create documents for TNVR slots
       for (let i = 0; i < tnvrSlotsToBook; i++) {
         const newAppointment = {
           userId: currentUser.uid,
-          trapperFirstName: trapperDetails.firstName || "",
-          trapperLastName: trapperDetails.lastName || "",
-          trapperPhoneNumber: trapperDetails.phone || "",
+          trapperFirstName: currentUser?.firstName || "",
+          trapperLastName: currentUser?.lastName || "",
+          trapperPhone: currentUser?.phone || "",
+          trapperNumber: currentUser?.trapperNumber || "",
           serviceType: "TNVR",
           clinicAddress: clinicAddress,
           appointmentTime: appointmentTimestamp,
@@ -297,17 +271,18 @@ export default function BookAppointmentPage() {
           lastModifiedByUserId: currentUser.uid,
           notes: notes,
         };
-        await addDoc(appointmentsRef, newAppointment); // Use addDoc to create a new document with a generated ID
-        bookedAppointmentDetailsList.push(newAppointment); // Add to list for confirmation
+        await addDoc(appointmentsRef, newAppointment);
+        bookedAppointmentDetailsList.push(newAppointment);
       }
 
       // Create documents for Foster slots
       for (let i = 0; i < fosterSlotsToBook; i++) {
         const newAppointment = {
           userId: currentUser.uid,
-          trapperFirstName: trapperDetails.firstName || "",
-          trapperLastName: trapperDetails.lastName || "",
-          trapperPhoneNumber: trapperDetails.phone || "",
+          trapperFirstName: currentUser?.firstName || "",
+          trapperLastName: currentUser?.lastName || "",
+          trapperPhone: currentUser?.phone || "",
+          trapperNumber: currentUser?.trapperNumber || "",
           serviceType: "Foster",
           clinicAddress: clinicAddress,
           appointmentTime: appointmentTimestamp,
@@ -318,8 +293,8 @@ export default function BookAppointmentPage() {
           lastModifiedByUserId: currentUser.uid,
           notes: notes,
         };
-        await addDoc(appointmentsRef, newAppointment); // Use addDoc to create a new document with a generated ID
-        bookedAppointmentDetailsList.push(newAppointment); // Add to list for confirmation
+        await addDoc(appointmentsRef, newAppointment);
+        bookedAppointmentDetailsList.push(newAppointment);
       }
 
       setBookingLoading(false);
@@ -345,7 +320,7 @@ export default function BookAppointmentPage() {
       setFosterSlotsToBook(0);
       setNotes("");
       // Re-fetch availability after booking
-      fetchAvailableSlots(); // Call the externally defined function to update display
+      fetchAvailableSlots();
     } catch (err) {
       console.error("Error booking appointment:", err);
       setError("Failed to book appointment. Please try again.");
@@ -368,11 +343,6 @@ export default function BookAppointmentPage() {
   const displayedTotalBookedTnvr = alreadyBookedTnvrSlots + tnvrSlotsToBook;
   const displayedTotalBookedFoster =
     alreadyBookedFosterSlots + fosterSlotsToBook;
-
-  // Show loading spinner while fetching trapper details
-  if (!trapperDetails) {
-    return <LoadingSpinner />;
-  }
 
   return (
     <div className="container mx-auto p-4">
@@ -488,16 +458,6 @@ export default function BookAppointmentPage() {
             <div className="text-red-500">{error}</div>
           ) : (
             <>
-              {/* Display Available Slots */}
-              {/* <div className="mb-4">
-                <p className="text-gray-700">
-                  TNVR Slots Available: {availableSlots.tnvr}
-                </p>
-                <p className="text-gray-700">
-                  Foster Slots Available: {availableSlots.foster}
-                </p>
-              </div> */}
-
               {/* Slot Quantity Selection and Progress Bars */}
               <div className="mb-4">
                 <h4 className="font-medium text-accent-purple mb-4">
@@ -643,11 +603,12 @@ export default function BookAppointmentPage() {
           <div className="absolute w-screen h-screen bg-primary-dark-purple opacity-50"></div>
           <div className="bg-primary-white p-6 rounded-xl shadow-xl max-w-sm w-full mx-4 z-100">
             <h2 className="text-2xl font-bold mb-4 text-center text-accent-purple">
-              Appointment Booked!
+              {bookedAppointmentDetails.bookedCount > 1
+                ? "Appointments Booked!"
+                : "Appointment Booked!"}
             </h2>
-            <div className="text-center mb-4">
-              <p className="text-success-green text-4xl">✓</p>{" "}
-              {/* Simple checkmark */}
+            <div className="flex items-center justify-center mb-4">
+              <SuccessIcon />
             </div>
             <p className="mb-2 text-gray-700 text-center">
               {bookedAppointmentDetails.bookedCount > 1
