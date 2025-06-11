@@ -363,7 +363,7 @@ export default function BookAppointmentPage() {
     alreadyBookedFosterSlots + fosterSlotsToBook;
 
   return (
-    <div className="container mx-auto p-4 pb-24">
+    <div className="container mx-auto p-4 pb-24 md:p-8 md:max-w-3xl">
       <h1 className="text-2xl text-center text-accent-purple font-bold mb-4">
         Book Appointment
       </h1>
@@ -434,7 +434,7 @@ export default function BookAppointmentPage() {
                   currentMonth.getFullYear() === selectedDate.getFullYear()
                     ? "bg-accent-purple text-white font-bold"
                     : day !== null && !isPastDate && !isClinicClosed
-                    ? "hover:bg-gray-200"
+                    ? "hover:bg-tertiary-purple hover:text-primary-white"
                     : ""
                 }
               `}
@@ -624,7 +624,7 @@ export default function BookAppointmentPage() {
       {/* --- Confirmation Modal --- */}
       {showConfirmationModal && bookedAppointmentDetails && (
         <div className="fixed inset-0 flex items-center justify-center">
-          <div className="absolute w-screen h-screen bg-primary-dark-purple opacity-50"></div>
+          <div className="absolute w-screen h-screen bg-slate-900 opacity-70"></div>
           <div className="bg-primary-white p-6 rounded-xl shadow-xl max-w-sm w-full mx-4 z-100">
             <h2 className="text-2xl font-bold mb-4 text-center text-accent-purple">
               {bookedAppointmentDetails.bookedCount > 1

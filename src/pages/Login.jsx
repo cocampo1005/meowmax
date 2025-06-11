@@ -52,7 +52,7 @@ export default function Login() {
       </p>
       <form onSubmit={handleLogin} className="flex flex-col gap-4 p-8 w-full">
         <input
-          className="input"
+          className="input-login"
           type="email"
           placeholder="Email"
           value={email}
@@ -63,7 +63,7 @@ export default function Login() {
             <input
               key={i}
               ref={inputRefs[i]}
-              className="input text-center"
+              className="input-login text-center"
               type="password"
               maxLength="1"
               value={digit}

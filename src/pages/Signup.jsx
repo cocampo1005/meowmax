@@ -64,7 +64,7 @@ export default function Signup() {
       </p>
       <form onSubmit={handleSignup} className="flex flex-col gap-4 p-8 w-full">
         <input
-          className="input"
+          className="input-login"
           type="email"
           placeholder="Email"
           value={email}
@@ -75,7 +75,7 @@ export default function Signup() {
             <input
               key={i}
               ref={inputRefs[i]}
-              className="input text-center"
+              className="input-login text-center"
               type="password"
               maxLength="1"
               value={digit}

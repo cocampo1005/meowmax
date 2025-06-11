@@ -1,30 +1,69 @@
-// src/components/ConfirmationModal.jsx
-import React from "react";
+import { Trash2 } from "lucide-react";
 
 export default function ConfirmationModal({
-  show,
-  title,
-  message,
-  confirmButtonText,
+  isOpen,
+  onClose,
   onConfirm,
-  onCancel,
+  title = "Are you sure?",
+  message,
+  isDeleting = false,
 }) {
-  if (!show) {
-    return null;
-  }
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50">
-      <div className="absolute w-screen h-screen bg-gray-900 opacity-50"></div>
-      <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4 z-50">
-        <h2 className="text-xl font-bold mb-4">{title}</h2>
-        <p className="mb-4 text-gray-700">{message}</p>
+    <div className="fixed inset-0 bg-slate-900/70 flex justify-center items-center z-50">
+      <div className="bg-white rounded-3xl flex flex-col gap-6 shadow-lg py-12 px-16 max-w-lg w-full">
+        <div className="flex items-center text-errorRed">
+          <div className="text-error-red">
+            <Trash2 />
+          </div>
+          <h2 className="text-3xl pl-2 font-accent font-bold">{title}</h2>
+        </div>
+        <div className="text-gray-700">{message}</div>
         <div className="flex justify-end gap-4">
-          <button className="gray-button" onClick={onCancel}>
-            Never Mind
+          <button
+            type="button"
+            onClick={onClose}
+            className="py-2 px-4 font-bold border-2 rounded-lg hover:bg-purple-50"
+            disabled={isDeleting}
+          >
+            Cancel
           </button>
-          <button className="red-button" onClick={onConfirm}>
-            {confirmButtonText}
+          <button
+            type="button"
+            onClick={onConfirm}
+            className={`bg-error-red text-primary-white px-4 py-2 rounded-lg flex items-center ${
+              isDeleting ? "opacity-50 cursor-not-allowed" : "hover:bg-red-600"
+            }`}
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <>
+                <svg
+                  className="animate-spin h-5 w-5 mr-2 text-white"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v8H4z"
+                  ></path>
+                </svg>
+                Deleting...
+              </>
+            ) : (
+              "Confirm"
+            )}
           </button>
         </div>
       </div>

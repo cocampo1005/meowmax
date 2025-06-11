@@ -154,23 +154,34 @@ export default function HomeUpcomingAppointments() {
     <div className="mt-8 flex-grow">
       {" "}
       {/* Add some top margin to space it from content above */}
-      <div className="flex justify-between items-center mb-4">
-        {" "}
-        {/* Add padding for alignment */}
-        <h2 className="text-xl font-semibold text-primary-dark-purple">
-          Upcoming appointments
-        </h2>
-        <Link
-          to="/appointments"
-          className="text-secondary-purple hover:underline active:text-primary-dark-purple text-sm font-semibold"
-        >
-          View All &gt;
-        </Link>
+      <div className="flex justify-between items-center mb-4 md:mb-6">
+        <div className="flex items-center justify-between w-full md:w-auto">
+          {" "}
+          {/* New wrapper for heading and "View All" */}
+          <h2 className="text-xl font-semibold text-primary-dark-purple">
+            Upcoming appointments
+          </h2>
+          <Link
+            to="/appointments"
+            className="ml-4 text-secondary-purple hover:underline active:text-primary-dark-purple text-sm font-semibold md:ml-6"
+          >
+            View All &gt;
+          </Link>
+        </div>
+        {/* Mobile-only Book Appointment button */}
+        <div className="hidden md:flex">
+          <Link
+            to="/book-appointment"
+            className="button text-sm px-4 py-2" // Added md:hidden
+          >
+            Book Appointment
+          </Link>
+        </div>
       </div>
       {loading ? (
         <LoadingSpinner />
       ) : upcomingAppointments.length > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-3 md:w-[33%]">
           {" "}
           {/* Add horizontal padding */}
           {upcomingAppointments.map((group) => {

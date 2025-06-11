@@ -1,40 +1,33 @@
-import { useAuth } from "../contexts/AuthContext"; // Import your useAuth hook
-import { useNavigate } from "react-router-dom"; // To redirect after logout
-import LoadingSpinner from "../components/LoadingSpinner"; // Adjust path as needed
-import { auth } from "../firebase"; // Import your firebase auth instance
+import { useAuth } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import LoadingSpinner from "../components/LoadingSpinner";
+import { auth } from "../firebase";
 import { LogoutIcon } from "../svgs/Icons";
 
 export default function Profile() {
-  const { currentUser, loading } = useAuth(); // Get currentUser and loading state from useAuth
+  const { currentUser, loading } = useAuth();
   const navigate = useNavigate();
 
   // Handle user logout
   const handleLogout = async () => {
     try {
-      await auth.signOut(); // Sign out the user using Firebase auth
+      await auth.signOut();
       console.log("User logged out successfully");
-      navigate("/login"); // Redirect to the login page after logout
-      // Or navigate to '/' if your home page is accessible without login
+      navigate("/login");
     } catch (error) {
       console.error("Error logging out:", error);
-      // Optionally display an error message to the user
     }
   };
 
-  // Show loading spinner while auth state is loading
   if (loading) {
     return <LoadingSpinner />;
   }
 
-  // If no user is logged in after loading, redirect to login
-  // This might happen if the user tries to access /profile directly when not authenticated
   if (!currentUser) {
-    navigate("/login"); // Redirect to login if not authenticated
-    return null; // Return null to prevent rendering before redirection
+    navigate("/login");
+    return null;
   }
 
-  // Assuming currentUser now includes profile data fetched in AuthContext
-  // based on our previous refactoring
   const { firstName, lastName, email, phone, address, trapperNumber } =
     currentUser;
 
@@ -67,38 +60,15 @@ export default function Profile() {
         </div>
 
         {/* Logout Button */}
-        <div className="pt-4 border-t border-gray-200">
+        <div className="pt-4 border-t border-gray-200 md:justify-end flex">
           {" "}
           {/* Separator */}
-          <button onClick={handleLogout} className="red-button w-full">
+          <button onClick={handleLogout} className="red-button w-full md:w-40">
             <LogoutIcon />
             <p>Logout</p>
           </button>
         </div>
       </div>
-      {/* Suggestions for other Profile Page features */}
-      {/* <div className="mt-8 p-4 bg-gray-100 rounded-lg">
-        <h3 className="text-lg font-semibold mb-3 text-primary-dark-purple">
-          More Profile Options (Future Ideas)
-        </h3>
-        <ul className="list-disc list-inside text-gray-700 space-y-1">
-          <li>
-            View past appointment history (Link to Appointments page filtered by
-            history)
-          </li>
-          <li>
-            View pending appointment requests (If applicable to your workflow)
-          </li>
-          <li>Manage notification preferences</li>
-          <li>Link to organization's policies or resources</li>
-          <li>FAQ or Help section link</li> */}
-      {/* Add other relevant links or information */}
-      {/* </ul>
-        <p className="mt-3 text-sm text-gray-600">
-          Note: Account details like email and password updates are handled by
-          administrators.
-        </p>
-      </div> */}
     </div>
   );
 }

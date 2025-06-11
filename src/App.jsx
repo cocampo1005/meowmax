@@ -6,6 +6,8 @@ import Signup from "./pages/Signup";
 import Appointments from "./pages/Appointments";
 import BookAppointment from "./pages/BookAppointment";
 import Profile from "./pages/Profile";
+import AccountsManager from "./pages/AccountsManager";
+import AppointmentsManager from "./pages/AppointmentsManager";
 
 function App() {
   return (
@@ -20,6 +22,9 @@ function App() {
         <Route path="/appointments" element={<Appointments />} />
         <Route path="/book-appointment" element={<BookAppointment />} />
         <Route path="/profile" element={<Profile />} />
+
+        <Route path="/accounts-manager" element={<AccountsManager />} />
+        <Route path="/appointments-manager" element={<AppointmentsManager />} />
       </Route>
     </Routes>
   );
