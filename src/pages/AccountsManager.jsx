@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { doc, collection, getDocs, updateDoc } from "firebase/firestore";
+import {
+  doc,
+  collection,
+  getDocs,
+  updateDoc,
+  orderBy,
+  query,
+} from "firebase/firestore";
 import { db, auth, functions } from "../firebase"; // adjust import as needed, assuming auth is also from firebase.js
 import ConfirmationModal from "../components/ConfirmationModal"; // Assuming ConfirmationModal is in the same directory
 import AccountModal from "../components/AccountModal"; // Assuming AccountModal is in the same directory
@@ -19,11 +26,11 @@ export default function AccountsManager() {
 
   // Fetch users from Firestore
   const fetchUsers = async () => {
-    const usersCol = collection(db, "users");
-    const snapshot = await getDocs(usersCol);
-    const userList = snapshot.docs.map((doc) => ({
+    const usersRef = collection(db, "users");
+    const q = query(usersRef, orderBy("trapperNumber", "asc"));
+    const querySnapshot = await getDocs(q);
+    const userList = querySnapshot.docs.map((doc) => ({
       id: doc.id,
-      uid: doc.data().uid, // Make sure 'uid' is included in your user documents
       ...doc.data(),
     }));
     setUsers(userList);
@@ -109,7 +116,6 @@ export default function AccountsManager() {
         });
 
         console.log("User created successfully:", result.data);
-        alert("User created successfully!");
 
         fetchUsers();
       } catch (error) {
@@ -132,7 +138,7 @@ export default function AccountsManager() {
     try {
       const deleteFirebaseUser = httpsCallable(functions, "deleteFirebaseUser");
       await deleteFirebaseUser({
-        uid: selectedUserDetails.uid,
+        uid: selectedUserDetails.id,
       });
 
       fetchUsers();

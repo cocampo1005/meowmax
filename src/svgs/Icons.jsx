@@ -24,11 +24,11 @@ export function LogoutIcon() {
   return <img src={LogoutSVG} alt="Logout Icon" />;
 }
 
-export function ChevronDown() {
+export function ChevronDown({ className = "" }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      className="h-6 w-6 text-white"
+      className={`h-6 w-6 ${className}`}
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -39,11 +39,11 @@ export function ChevronDown() {
   );
 }
 
-export function ChevronUp() {
+export function ChevronUp({ className = "" }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      className="h-6 w-6 text-white"
+      className={`h-6 w-6 ${className}`}
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"

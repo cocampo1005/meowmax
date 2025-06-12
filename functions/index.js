@@ -182,7 +182,6 @@ exports.createNewUser = onCall(async (request) => {
 
     // 6. Store additional user data in Firestore
     const userDataToStore = {
-      uid: uid,
       email: email,
       firstName: firstName,
       lastName: lastName,

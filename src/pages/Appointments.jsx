@@ -344,7 +344,7 @@ export default function Appointments() {
           {loading ? (
             <LoadingSpinner />
           ) : appointments.length > 0 ? (
-            <div className="space-y-6 md:grid md:grid-cols-2 md:gap-6 lg:grid-cols-3">
+            <div className="space-y-6 md:space-y-0 md:grid md:grid-cols-2 md:gap-6 lg:grid-cols-3">
               {groupAppointmentsByDateAndClinic(appointments).map((group) => {
                 const groupKey = `${group.dateKey}-${group.clinicAddress}`;
                 const isGroupExpanded = expandedGroupKey === groupKey;
