@@ -115,23 +115,3 @@ body {
   background-color: #f3f0ff;
   cursor: pointer;
 }
-
-.gray-button {
-  background-color: oklch(92.8% 0.006 264.531);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: oklch(55.1% 0.027 264.364);
-  font-weight: 600;
-  border-radius: 0.5rem;
-  padding: 0.5rem 1rem;
-  margin-top: 1rem;
-}
-.gray-button:hover {
-  background-color: oklch(70.7% 0.022 261.325);
-  color: var(--color-primary-white);
-}
-.gray-button:active {
-  background-color: oklch(50.2% 0.03 261.325);
-  color: var(--color-primary-white);
-}

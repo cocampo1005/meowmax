@@ -7,12 +7,13 @@ import {
   orderBy,
   query,
 } from "firebase/firestore";
-import { db, auth, functions } from "../firebase"; // adjust import as needed, assuming auth is also from firebase.js
-import ConfirmationModal from "../components/ConfirmationModal"; // Assuming ConfirmationModal is in the same directory
-import AccountModal from "../components/AccountModal"; // Assuming AccountModal is in the same directory
-import { Trash2, SquarePen, Plus } from "lucide-react";
+import { db, auth, functions } from "../firebase";
+import ConfirmationModal from "../components/ConfirmationModal";
+import AccountModal from "../components/AccountModal";
+import PerformanceMetricsModal from "../components/PerformanceMetricsModal";
+import { Trash2, SquarePen, Plus, ChartSpline } from "lucide-react";
 import { httpsCallable } from "firebase/functions";
-import { useAuth } from "../contexts/AuthContext"; // Assuming AuthContext is used for current user
+import { useAuth } from "../contexts/AuthContext";
 import { formatPhoneNumber } from "../utils/phoneNumberReformatter";
 
 export default function AccountsManager() {
@@ -23,6 +24,10 @@ export default function AccountsManager() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // New state for performance metrics modal
+  const [isMetricsModalOpen, setMetricsModalOpen] = useState(false);
+  const [selectedUserForMetrics, setSelectedUserForMetrics] = useState(null);
 
   // Fetch users from Firestore
   const fetchUsers = async () => {
@@ -127,6 +132,31 @@ export default function AccountsManager() {
     setAccountModalOpen(false);
   };
 
+  // Function to open the metrics modal
+  const handleEditMetricsClick = () => {
+    const userToEdit = users.find((user) => user.id === selectedUserId);
+    setSelectedUserForMetrics(userToEdit);
+    setMetricsModalOpen(true);
+  };
+
+  // Function to handle saving user metrics data
+  const handleSaveMetrics = async (userId, metricsData) => {
+    if (!userId) return;
+
+    const userDocRef = doc(db, "users", userId);
+    try {
+      // Use dot notation to update the entire performanceMetrics map
+      await updateDoc(userDocRef, {
+        performanceMetrics: metricsData,
+      });
+      console.log("User performance metrics updated successfully!");
+      fetchUsers(); // Re-fetch users to update the UI
+    } catch (error) {
+      console.error("Error updating user performance metrics:", error);
+      // Handle error (e.g., show an error message to the user)
+    }
+  };
+
   const confirmDelete = async () => {
     if (!auth.currentUser) {
       console.error("User is not authenticated. Cannot delete user.");
@@ -177,6 +207,14 @@ export default function AccountsManager() {
         />
       )}
 
+      {/* NEW: Performance Metrics Modal */}
+      <PerformanceMetricsModal
+        isOpen={isMetricsModalOpen}
+        onClose={() => setMetricsModalOpen(false)}
+        user={selectedUserForMetrics}
+        onSaveMetrics={handleSaveMetrics} // Pass the new save handler
+      />
+
       {/* Confirmation Modal for Deleting */}
       {isDeleteModalOpen && (
         <ConfirmationModal
@@ -212,6 +250,7 @@ export default function AccountsManager() {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <div>
+                  <h3 className="text-xl font-semibold mb-2">User Info:</h3>
                   <p>
                     <strong>Email:</strong> {selectedUserDetails.email}
                   </p>
@@ -226,8 +265,6 @@ export default function AccountsManager() {
                       ? formatPhoneNumber(selectedUserDetails.phone)
                       : "N/A"}
                   </p>
-                </div>
-                <div>
                   <p>
                     <strong>Address:</strong> {selectedUserDetails.address}
                   </p>
@@ -237,6 +274,62 @@ export default function AccountsManager() {
                   <p>
                     <strong>Equipment:</strong> {selectedUserDetails.equipment}
                   </p>
+                </div>
+                {/* NEW: Display Performance Metrics */}
+                <div>
+                  <div className="flex items-center gap-4">
+                    <h3 className="text-xl font-semibold mb-2">
+                      Performance Metrics:
+                    </h3>
+                    {/* NEW: Button to open Performance Metrics Modal */}
+                    <button
+                      onClick={handleEditMetricsClick}
+                      disabled={!selectedUserId}
+                      className={`mr-2 px-4 py-2 rounded-md flex items-center ${
+                        selectedUserId
+                          ? "bg-accent-purple text-white hover:cursor-pointer hover:bg-secondary-purple"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      }`}
+                    >
+                      <ChartSpline className="w-5 h-5 mr-2" />
+                      Edit Metrics
+                    </button>
+                  </div>
+                  {selectedUserDetails.performanceMetrics ? (
+                    <>
+                      <p>
+                        <strong>Commitment Score:</strong>{" "}
+                        {selectedUserDetails.performanceMetrics
+                          .commitmentScore || 0}
+                      </p>
+                      <p>
+                        <strong>Strikes:</strong>{" "}
+                        {selectedUserDetails.performanceMetrics.strikes || 0}
+                      </p>
+                      <p>
+                        <strong>Appointments Booked:</strong>{" "}
+                        {selectedUserDetails.performanceMetrics
+                          .totalAppointmentsBooked || 0}
+                      </p>
+                      <p>
+                        <strong>Appointments Completed:</strong>{" "}
+                        {selectedUserDetails.performanceMetrics
+                          .totalAppointmentsCompleted || 0}
+                      </p>
+                      <p>
+                        <strong>Appointments Overbooked:</strong>{" "}
+                        {selectedUserDetails.performanceMetrics
+                          .totalAppointmentsOverBooked || 0}
+                      </p>
+                      <p>
+                        <strong>Appointments Underbooked:</strong>{" "}
+                        {selectedUserDetails.performanceMetrics
+                          .totalAppointmentsUnderBooked || 0}
+                      </p>
+                    </>
+                  ) : (
+                    <p>No performance metrics available.</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -276,7 +369,7 @@ export default function AccountsManager() {
                   <th className="px-6 py-3 text-left">Phone</th>
                 </tr>
               </thead>
-              <tbody className="bg-primary-white divide-y divide-gray-300 overflow-y-auto max-h-[calc(100vh-350px) text-primary-dark-purple">
+              <tbody className="bg-primary-white divide-y divide-gray-300 overflow-y-auto max-h-[calc(100vh-350px) text-primary-dark-purple hover:cursor-pointer">
                 {users?.map((user) => (
                   <tr
                     key={user.id}
