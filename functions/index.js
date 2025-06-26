@@ -125,6 +125,7 @@ exports.createNewUser = onCall(async (request) => {
     address,
     role,
     trapperNumber,
+    trapperRegion,
     equipment,
     code,
   } = request.data;
@@ -189,6 +190,7 @@ exports.createNewUser = onCall(async (request) => {
       address: address || null,
       role: role,
       trapperNumber: trapperNumber || null,
+      trapperRegion: trapperRegion || null,
       code: code || null,
       equipment: equipment || null,
       isActive: true,

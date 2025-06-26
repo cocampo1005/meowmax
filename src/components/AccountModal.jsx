@@ -10,6 +10,7 @@ export default function AccountModal({ isOpen, onClose, onSave, initialData }) {
     address: "",
     role: "trapper",
     trapperNumber: "",
+    trapperRegion: [],
     code: "",
     equipment: "",
   });
@@ -27,6 +28,7 @@ export default function AccountModal({ isOpen, onClose, onSave, initialData }) {
         address: initialData.address || "",
         role: initialData.role || "trapper",
         trapperNumber: initialData.trapperNumber || "",
+        trapperRegion: initialData.trapperRegion || [],
         code: initialData.code || "",
         equipment: initialData.equipment || "",
       });
@@ -40,6 +42,7 @@ export default function AccountModal({ isOpen, onClose, onSave, initialData }) {
         address: "",
         role: "trapper",
         trapperNumber: "",
+        trapperRegion: [],
         code: "",
         equipment: "",
       });
@@ -52,8 +55,22 @@ export default function AccountModal({ isOpen, onClose, onSave, initialData }) {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleRegionChange = (e) => {
+    const { value, checked } = e.target;
+    setFormData((prev) => {
+      const currentRegions = prev.trapperRegion || [];
+      return {
+        ...prev,
+        trapperRegion: checked
+          ? [...currentRegions, value]
+          : currentRegions.filter((region) => region !== value),
+      };
+    });
+  };
+
   const validateForm = () => {
     let newErrors = {};
+
     if (!formData.email.trim()) newErrors.email = "Email is required.";
     if (!formData.firstName.trim())
       newErrors.firstName = "First name is required.";
@@ -62,13 +79,26 @@ export default function AccountModal({ isOpen, onClose, onSave, initialData }) {
     if (!formData.role.trim()) newErrors.role = "Role is required.";
     if (!formData.phone.trim()) newErrors.phone = "Phone number is required.";
     if (!formData.address.trim()) newErrors.address = "Address is required.";
-    if (formData.role === "trapper" && !formData.trapperNumber.trim())
+
+    if (formData.role === "trapper" && !formData.trapperNumber.trim()) {
       newErrors.trapperNumber = "Trapper number is required for trappers.";
-    if (!formData.equipment.trim())
+    }
+
+    if (!formData.trapperRegion || formData.trapperRegion.length === 0) {
+      newErrors.trapperRegion = "At least one region must be selected.";
+    }
+
+    if (!formData.equipment.trim()) {
       newErrors.equipment = "Equipment value is required.";
-    if (!formData.code.trim()) newErrors.code = "Four-digit code is required.";
-    else if (!/^\d{4}$/.test(formData.code))
+    } else if (!/^\d+$/.test(formData.equipment)) {
+      newErrors.equipment = "Equipment must be a number.";
+    }
+
+    if (!formData.code.trim()) {
+      newErrors.code = "Four-digit code is required.";
+    } else if (!/^\d{4}$/.test(formData.code)) {
       newErrors.code = "Code must be exactly four digits.";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -258,21 +288,51 @@ export default function AccountModal({ isOpen, onClose, onSave, initialData }) {
                 />
               </div>
 
-              <div>
-                <label>
-                  Equipment Capacity Number{" "}
-                  <span className="text-error-red">*</span>
-                </label>
-                {errors.equipment && (
-                  <p className="text-error-red text-xs">{errors.equipment}</p>
-                )}
-                <input
-                  type="text"
-                  name="equipment"
-                  value={formData.equipment}
-                  onChange={handleInputChange}
-                  className="input"
-                />
+              <div className="grid grid-cols-2 gap-8">
+                <div>
+                  <label className="block">
+                    Trapping Region <span className="text-error-red">*</span>
+                  </label>
+                  {errors.trapperRegion && (
+                    <p className="text-error-red text-xs">
+                      {errors.trapperRegion}
+                    </p>
+                  )}
+                  <div className="space-y-1 mt-2">
+                    {["Miami-Dade", "Broward"].map((region) => (
+                      <label
+                        key={region}
+                        className="flex items-center space-x-2"
+                      >
+                        <input
+                          type="checkbox"
+                          name="trapperRegion"
+                          value={region}
+                          checked={formData.trapperRegion.includes(region)}
+                          onChange={handleRegionChange}
+                          className="accent-secondary-purple"
+                        />
+                        <span>{region}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label>
+                    Equipment Capacity <span className="text-error-red">*</span>
+                  </label>
+                  {errors.equipment && (
+                    <p className="text-error-red text-xs">{errors.equipment}</p>
+                  )}
+                  <input
+                    type="number"
+                    name="equipment"
+                    value={formData.equipment}
+                    onChange={handleInputChange}
+                    className="input"
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end space-x-4 mt-6">

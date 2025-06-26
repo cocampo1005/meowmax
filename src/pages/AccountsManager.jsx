@@ -7,11 +7,18 @@ import {
   orderBy,
   query,
 } from "firebase/firestore";
-import { db, auth, functions } from "../firebase";
+import { db, functions } from "../firebase";
 import ConfirmationModal from "../components/ConfirmationModal";
 import AccountModal from "../components/AccountModal";
 import PerformanceMetricsModal from "../components/PerformanceMetricsModal";
-import { Trash2, SquarePen, Plus, ChartSpline } from "lucide-react";
+import {
+  Trash2,
+  SquarePen,
+  Plus,
+  ChartSpline,
+  Search,
+  RotateCcw,
+} from "lucide-react";
 import { httpsCallable } from "firebase/functions";
 import { useAuth } from "../contexts/AuthContext";
 import { formatPhoneNumber } from "../utils/phoneNumberReformatter";
@@ -19,6 +26,7 @@ import { formatPhoneNumber } from "../utils/phoneNumberReformatter";
 export default function AccountsManager() {
   const { currentUser } = useAuth();
   const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [isAccountModalOpen, setAccountModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -29,10 +37,17 @@ export default function AccountsManager() {
   const [isMetricsModalOpen, setMetricsModalOpen] = useState(false);
   const [selectedUserForMetrics, setSelectedUserForMetrics] = useState(null);
 
+  // New states for filters
+  const [equipmentFilter, setEquipmentFilter] = useState("");
+  const [regionFilter, setRegionFilter] = useState("");
+  const [searchTerm, setSearchTerm] = useState(""); // New state for search term
+
   // Fetch users from Firestore
   const fetchUsers = async () => {
     const usersRef = collection(db, "users");
-    const q = query(usersRef, orderBy("trapperNumber", "asc"));
+    // Start with a base query ordered by trapperNumber
+    let q = query(usersRef, orderBy("trapperNumber", "asc"));
+
     const querySnapshot = await getDocs(q);
     const userList = querySnapshot.docs.map((doc) => ({
       id: doc.id,
@@ -44,6 +59,38 @@ export default function AccountsManager() {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  // Effect to filter users whenever the users list or filter criteria change
+  useEffect(() => {
+    let currentFilteredUsers = users;
+
+    if (searchTerm) {
+      currentFilteredUsers = currentFilteredUsers.filter(
+        (user) =>
+          user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.trapperNumber.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (equipmentFilter) {
+      const minCapacity = parseInt(equipmentFilter, 10);
+      if (!isNaN(minCapacity)) {
+        currentFilteredUsers = currentFilteredUsers.filter(
+          (user) =>
+            user.equipment && parseInt(user.equipment, 10) >= minCapacity
+        );
+      }
+    }
+
+    if (regionFilter) {
+      currentFilteredUsers = currentFilteredUsers.filter(
+        (user) =>
+          user.trapperRegion && user.trapperRegion.includes(regionFilter)
+      );
+    }
+    setFilteredUsers(currentFilteredUsers);
+  }, [users, equipmentFilter, regionFilter, searchTerm]);
 
   const selectedUserDetails = users.find((user) => user.id === selectedUserId);
 
@@ -65,14 +112,7 @@ export default function AccountsManager() {
 
   // Saves a new user or updates an existing one
   const handleSaveUser = async (userData) => {
-    // --- DIAGNOSTIC LOG ---
-    console.log(
-      "Current user before calling Cloud Function:",
-      auth.currentUser
-    );
-    // ----------------------
-
-    if (!auth.currentUser) {
+    if (currentUser) {
       console.error("User is not authenticated. Cannot create/update user.");
       alert("Authentication error. Please log in again.");
       return;
@@ -158,7 +198,7 @@ export default function AccountsManager() {
   };
 
   const confirmDelete = async () => {
-    if (!auth.currentUser) {
+    if (currentUser) {
       console.error("User is not authenticated. Cannot delete user.");
       alert("Authentication error. Please log in again.");
       return;
@@ -182,16 +222,20 @@ export default function AccountsManager() {
     }
   };
 
+  // Function to reset all filters
+  const handleResetFilters = () => {
+    setSearchTerm("");
+    setEquipmentFilter("");
+    setRegionFilter("");
+  };
+
   return (
     <>
       <header className="w-full flex justify-between border-b-2 border-tertiary-purple p-8">
         <h1 className="font-bold text-2xl text-primary-dark-purple">
           Manage Accounts
         </h1>
-        <button
-          onClick={handleAdd}
-          className="flex gap-2 bg-accent-purple hover:bg-secondary-purple text-primary-white py-2 px-4 rounded-lg"
-        >
+        <button onClick={handleAdd} className="button">
           <Plus />
           <span>Add User</span>
         </button>
@@ -274,6 +318,11 @@ export default function AccountsManager() {
                   <p>
                     <strong>Equipment:</strong> {selectedUserDetails.equipment}
                   </p>
+                  {/* Display Trapper Region */}
+                  <p>
+                    <strong>Trapper Region:</strong>{" "}
+                    {selectedUserDetails.trapperRegion || "N/A"}
+                  </p>
                 </div>
                 {/* NEW: Display Performance Metrics */}
                 <div>
@@ -285,13 +334,13 @@ export default function AccountsManager() {
                     <button
                       onClick={handleEditMetricsClick}
                       disabled={!selectedUserId}
-                      className={`mr-2 px-4 py-2 rounded-md flex items-center ${
+                      className={`px-3 py-1 text-sm rounded-lg flex gap-2 items-center ${
                         selectedUserId
-                          ? "bg-accent-purple text-white hover:cursor-pointer hover:bg-secondary-purple"
+                          ? "bg-secondary-purple text-white hover:cursor-pointer hover:bg-accent-purple"
                           : "bg-gray-300 text-gray-500 cursor-not-allowed"
                       }`}
                     >
-                      <ChartSpline className="w-5 h-5 mr-2" />
+                      <ChartSpline className="w-4 h-4" />
                       Edit Metrics
                     </button>
                   </div>
@@ -351,26 +400,68 @@ export default function AccountsManager() {
           </article>
         )}
 
+        {/* Filter Inputs */}
+        <div className="flex gap-4">
+          <div className="relative flex-grow">
+            <input
+              type="text"
+              placeholder="Search by Name or Number"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="p-2 border outline-accent-purple rounded-lg w-full pl-10"
+            />
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-primary-dark-purple"
+              size={20}
+            />
+          </div>
+          <input
+            type="number"
+            placeholder="Min Equipment Capacity"
+            value={equipmentFilter}
+            onChange={(e) => setEquipmentFilter(e.target.value)}
+            className="p-2 border  outline-accent-purple rounded-lg"
+          />
+          <select
+            value={regionFilter}
+            onChange={(e) => setRegionFilter(e.target.value)}
+            className="p-2 border  outline-accent-purple rounded-lg"
+          >
+            <option value="">All Regions</option>
+            <option value="Broward">Broward</option>
+            <option value="Miami-Dade">Miami-Dade</option>
+          </select>
+          <button
+            onClick={handleResetFilters}
+            className="ml-auto px-4 py-2 cursor-pointer bg-secondary-purple text-white rounded-lg hover:bg-accent-purple flex items-center gap-2"
+          >
+            <RotateCcw size={18} />
+            <span>Reset Filters</span>
+          </button>
+        </div>
+
         <div
-          className={`w-full overflow-x-auto overflow-y-auto flex-grow ${
+          className={`w-full rounded-xl relative overflow-x-auto overflow-y-auto flex-grow ${
             selectedUserDetails
-              ? "max-h-[calc(100vh-355px)"
-              : "max-h-[calc(100vh-170px)"
+              ? "max-h-[calc(100vh-350px)]"
+              : "max-h-[calc(100vh-150px)]"
           }`}
         >
-          <div className="rounded-xl overflow-hidden">
-            <table className="w-full min-w-full divide-y divide-tertiary-purple rounded-xl">
-              <thead className="sticky top-0 z-10 bg-secondary-purple rounded-xl text-primary-white">
+          <div className="rounded-xl">
+            <table className="w-full min-w-full divide-y rounded-xl divide-tertiary-purple">
+              <thead className="sticky top-0 z-10 bg-secondary-purple text-primary-white">
                 <tr>
                   <th className="px-6 py-3 text-left">Number</th>
                   <th className="px-6 py-3 text-left">Name</th>
                   <th className="px-6 py-3 text-left">Role</th>
                   <th className="px-6 py-3 text-left">Code</th>
                   <th className="px-6 py-3 text-left">Phone</th>
+                  <th className="px-6 py-3 text-left">Region</th>
+                  <th className="px-6 py-3 text-left">Eqpt</th>
                 </tr>
               </thead>
-              <tbody className="bg-primary-white divide-y divide-gray-300 overflow-y-auto max-h-[calc(100vh-350px) text-primary-dark-purple hover:cursor-pointer">
-                {users?.map((user) => (
+              <tbody className="bg-primary-white divide-y divide-gray-300 max-h-[calc(100vh-550px) text-primary-dark-purple hover:cursor-pointer">
+                {filteredUsers?.map((user) => (
                   <tr
                     key={user.id}
                     className={`group hover:bg-primary-light-purple ${
@@ -386,6 +477,10 @@ export default function AccountsManager() {
                     <td className="px-6 py-4">{user.code}</td>
                     <td className="px-6 py-4">
                       {user.phone ? formatPhoneNumber(user.phone) : "N/A"}
+                    </td>
+                    <td className="px-6 py-4">{user.trapperRegion || "N/A"}</td>
+                    <td className="px-6 py-4 text-right">
+                      {user.equipment || "N/A"}
                     </td>
                   </tr>
                 ))}
