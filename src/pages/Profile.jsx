@@ -28,8 +28,16 @@ export default function Profile() {
     return null;
   }
 
-  const { firstName, lastName, email, phone, address, trapperNumber } =
-    currentUser;
+  const {
+    firstName,
+    lastName,
+    email,
+    phone,
+    address,
+    trapperNumber,
+    trapperRegion,
+    equipment,
+  } = currentUser;
 
   return (
     <div className="container mx-auto h-full overflow-y-auto p-4">
@@ -55,6 +63,12 @@ export default function Profile() {
             </p>
             <p>
               <strong>Address:</strong> {address || "N/A"}
+            </p>
+            <p>
+              <strong>Region(s):</strong> {trapperRegion || "N/A"}
+            </p>
+            <p>
+              <strong>Equipment:</strong> {equipment || "N/A"}
             </p>
           </div>
         </div>

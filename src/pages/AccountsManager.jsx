@@ -112,7 +112,7 @@ export default function AccountsManager() {
 
   // Saves a new user or updates an existing one
   const handleSaveUser = async (userData) => {
-    if (currentUser) {
+    if (!currentUser) {
       console.error("User is not authenticated. Cannot create/update user.");
       alert("Authentication error. Please log in again.");
       return;
@@ -228,6 +228,16 @@ export default function AccountsManager() {
     setEquipmentFilter("");
     setRegionFilter("");
   };
+
+  if (currentUser?.role !== "admin") {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <h1 className="text-2xl font-bold text-error-red">
+          You do not have permission to access this page.
+        </h1>
+      </div>
+    );
+  }
 
   return (
     <>

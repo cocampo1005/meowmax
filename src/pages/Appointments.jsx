@@ -1,5 +1,5 @@
 // src/pages/AppointmentsListPage.jsx
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   collection,
   query,
@@ -7,9 +7,9 @@ import {
   orderBy,
   getDocs,
   Timestamp,
-  deleteDoc, // Import deleteDoc
-  doc, // Import doc
-  writeBatch, // Import writeBatch for batch deletions
+  deleteDoc,
+  doc,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
@@ -19,11 +19,9 @@ import {
   AppointmentListItemIcon,
   ChevronDown,
   ChevronUp,
-  LocationIcon,
   NotesIcon,
-  ServiceIcon,
 } from "../svgs/Icons";
-import ConfirmationModal from "../components/ConfirmationModal"; // Import the ConfirmationModal
+import ConfirmationModal from "../components/ConfirmationModal";
 
 // Clinic Data
 const CLINIC = {
@@ -38,33 +36,33 @@ export default function Appointments() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState("upcoming");
   const [expandedGroupKey, setExpandedGroupKey] = useState(null);
-  const [expandedAppointmentId, setExpandedAppointmentId] = useState(null); // State to track the expanded individual appointment
-  const [showCancelModal, setShowCancelModal] = useState(false); // State for individual cancel modal
-  const [appointmentToCancel, setAppointmentToCancel] = useState(null); // State to hold appointment details for cancellation
-  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false); // State for delete all modal
-  const [groupToDelete, setGroupToDelete] = useState(null); // State to hold group details for deletion
+  const [expandedAppointmentId, setExpandedAppointmentId] = useState(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [appointmentToCancel, setAppointmentToCancel] = useState(null);
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
+  const [groupToDelete, setGroupToDelete] = useState(null);
 
   // Function to fetch appointments from Firestore
   const fetchAppointments = async (userId, currentView) => {
     setLoading(true);
     try {
       const appointmentsCollectionRef = collection(db, "appointments");
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
       let q;
-
-      const nowTimestamp = Timestamp.now();
 
       if (currentView === "upcoming") {
         q = query(
           appointmentsCollectionRef,
           where("userId", "==", userId),
-          where("appointmentTime", ">=", nowTimestamp),
+          where("appointmentTime", ">=", Timestamp.fromDate(todayStart)),
           orderBy("appointmentTime", "asc")
         );
       } else {
         q = query(
           appointmentsCollectionRef,
           where("userId", "==", userId),
-          where("appointmentTime", "<", nowTimestamp),
+          where("appointmentTime", "<", Timestamp.fromDate(todayStart)),
           orderBy("appointmentTime", "desc")
         );
       }
@@ -218,6 +216,8 @@ export default function Appointments() {
 
   // Function to handle deleting all appointments for a date
   const handleDeleteAllAppointments = (group) => {
+    console.log("Preparing to delete all appointments for group:", group);
+
     setGroupToDelete(group);
     setShowDeleteAllModal(true);
   };
@@ -525,29 +525,49 @@ export default function Appointments() {
 
         {/* Individual Cancel Confirmation Modal */}
         <ConfirmationModal
-          show={showCancelModal}
-          title="Confirm Cancellation"
-          message={`Are you sure you want to cancel this ${appointmentToCancel?.serviceType} appointment?`}
-          confirmButtonText="Yes, Cancel"
+          isOpen={showCancelModal}
+          title="Confirm Release"
+          message={
+            <>
+              Are you sure you want to cancel this{" "}
+              <strong>{appointmentToCancel?.serviceType}</strong> appointment
+              for{" "}
+              <strong>
+                {appointmentToCancel?.appointmentTime
+                  ?.toDate()
+                  .toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+              </strong>
+              ?
+            </>
+          }
           onConfirm={confirmCancelAppointment}
-          onCancel={handleCloseModal}
+          onClose={handleCloseModal}
         />
 
         {/* Delete All Confirmation Modal */}
         <ConfirmationModal
-          show={showDeleteAllModal}
-          title="Confirm Deletion"
-          message={`Are you sure you want to delete all appointments for ${groupToDelete?.displayDate.toLocaleDateString(
-            "en-US",
-            {
-              month: "long",
-              day: "numeric",
-              year: "numeric",
-            }
-          )} at ${groupToDelete?.clinicName}? This action cannot be undone.`}
-          confirmButtonText="Yes, Delete All"
+          isOpen={showDeleteAllModal}
+          title="Confirm Release All"
+          message={
+            <>
+              Are you sure you want to delete <strong>all appointments</strong>{" "}
+              for{" "}
+              <strong>
+                {groupToDelete?.displayDate.toLocaleDateString("en-US", {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </strong>{" "}
+              at Street Cat Clinic? This action cannot be undone.
+            </>
+          }
           onConfirm={confirmDeleteAllAppointments}
-          onCancel={handleCloseModal}
+          onClose={handleCloseModal}
         />
       </div>
     </>

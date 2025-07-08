@@ -10,6 +10,8 @@ import {
   doc,
   getDoc,
   addDoc,
+  updateDoc,
+  increment,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
@@ -24,29 +26,24 @@ const CLINIC = {
   address: "500 NE 167th St, Miami, FL 33162",
 };
 
-// Constants for slot capacity
-const TNVR_CAPACITY = 70;
-const FOSTER_CAPACITY = 10;
-
 export default function BookAppointmentPage() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
 
-  // I also removed slectedClinicId from the useEffect dependencies
-  // const [selectedClinicId, setSelectedClinicId] = useState("");
-
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [availableSlots, setAvailableSlots] = useState({
-    tnvr: TNVR_CAPACITY,
-    foster: FOSTER_CAPACITY,
+    tnvr: 0,
+    foster: 0,
   });
+  const [dailyCapacity, setDailyCapacity] = useState({ tnvr: 0, foster: 0 });
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [tnvrSlotsToBook, setTnvrSlotsToBook] = useState(0);
   const [fosterSlotsToBook, setFosterSlotsToBook] = useState(0);
   const [notes, setNotes] = useState("");
   const [bookingLoading, setBookingLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [appointmentCapacitiesMap, setAppointmentCapacitiesMap] = useState({}); // New state for capacities map
 
   // State for Confirmation Modal
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
@@ -55,35 +52,42 @@ export default function BookAppointmentPage() {
 
   // --- Slot Availability Logic ---
 
-  // Function to fetch available slots - Defined outside useEffect
-  const fetchAvailableSlots = useCallback(async () => {
-    if (!selectedDate) {
-      // Changed from !selectedDate || !selectedClinicId
-      // Reset available slots and quantities when date or clinic is cleared
-      setAvailableSlots({ tnvr: TNVR_CAPACITY, foster: FOSTER_CAPACITY });
-      setTnvrSlotsToBook(0);
-      setFosterSlotsToBook(0);
-      return;
-    }
-
+  // Function to fetch available slots for a selected date
+  const fetchAvailableSlotsForDate = useCallback(async (date) => {
     setLoadingSlots(true);
     setError(null);
     setTnvrSlotsToBook(0);
     setFosterSlotsToBook(0);
 
+    const docId = date.toISOString().split("T")[0]; // e.g., "YYYY-MM-DD"
+
     try {
+      // Fetch daily capacity first using the document ID
+      const capacityDocRef = doc(db, "appointmentCapacities", docId);
+      const capacityDoc = await getDoc(capacityDocRef);
+
+      let tnvrCap = 0;
+      let fosterCap = 0;
+
+      if (capacityDoc.exists()) {
+        const data = capacityDoc.data();
+        tnvrCap = data.tnvrCapacity || 0;
+        fosterCap = data.fosterCapacity || 0;
+      }
+      setDailyCapacity({ tnvr: tnvrCap, foster: fosterCap });
+
       const startOfDay = new Date(
-        selectedDate.getFullYear(),
-        selectedDate.getMonth(),
-        selectedDate.getDate(),
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
         0,
         0,
         0
       );
       const endOfDay = new Date(
-        selectedDate.getFullYear(),
-        selectedDate.getMonth(),
-        selectedDate.getDate(),
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
         23,
         59,
         59
@@ -94,13 +98,7 @@ export default function BookAppointmentPage() {
         appointmentsRef,
         where("appointmentTime", ">=", Timestamp.fromDate(startOfDay)),
         where("appointmentTime", "<=", Timestamp.fromDate(endOfDay)),
-        where(
-          "clinicAddress",
-          "==",
-          // If they ever add more clinics, use this instead:
-          // CLINICS.find((c) => c.id === selectedClinicId)?.address || ""
-          CLINIC.address // Main and only clinic for now
-        )
+        where("clinicAddress", "==", CLINIC.address)
       );
 
       const querySnapshot = await getDocs(q);
@@ -117,8 +115,8 @@ export default function BookAppointmentPage() {
       });
 
       setAvailableSlots({
-        tnvr: TNVR_CAPACITY - bookedTNVR,
-        foster: FOSTER_CAPACITY - bookedFoster,
+        tnvr: tnvrCap - bookedTNVR,
+        foster: fosterCap - bookedFoster,
       });
     } catch (err) {
       console.error("Error fetching available slots:", err);
@@ -127,14 +125,71 @@ export default function BookAppointmentPage() {
     } finally {
       setLoadingSlots(false);
     }
-  }, [selectedDate]);
+  }, []);
+
+  // Effect to fetch capacities for all days in the current month
+  useEffect(() => {
+    const fetchMonthlyCapacities = async () => {
+      const startOfMonth = new Date(
+        currentMonth.getFullYear(),
+        currentMonth.getMonth(),
+        1
+      );
+      const endOfMonth = new Date(
+        currentMonth.getFullYear(),
+        currentMonth.getMonth() + 1,
+        0
+      );
+
+      const capacitiesRef = collection(db, "appointmentCapacities");
+      // Query for all documents in the collection (or a reasonable range if your collection is huge)
+      // Since document IDs are date strings, we can't directly query by Timestamp field that doesn't exist.
+      // We will fetch all and filter client-side by month based on doc.id.
+      // If your collection becomes very large, consider re-adding a 'date' field as Timestamp for server-side filtering.
+      const q = query(capacitiesRef); // Fetch all documents in the collection
+
+      try {
+        const querySnapshot = await getDocs(q);
+        const capacities = {};
+        querySnapshot.forEach((doc) => {
+          const docId = doc.id; // doc.id is already "YYYY-MM-DD"
+          const [year, month, day] = docId.split("-").map(Number);
+          const docDate = new Date(year, month - 1, day); // Month is 0-indexed in JS Date
+
+          // Filter client-side to include only documents for the current month
+          if (
+            docDate.getMonth() === currentMonth.getMonth() &&
+            docDate.getFullYear() === currentMonth.getFullYear()
+          ) {
+            const data = doc.data();
+            capacities[docId] = {
+              tnvrCapacity: data.tnvrCapacity || 0,
+              fosterCapacity: data.fosterCapacity || 0,
+            };
+          }
+        });
+        setAppointmentCapacitiesMap(capacities);
+      } catch (err) {
+        console.error("Error fetching monthly capacities:", err);
+      }
+    };
+
+    fetchMonthlyCapacities();
+  }, [currentMonth]); // Re-fetch when currentMonth changes
 
   // Fetch available slots when selectedDate changes
   useEffect(() => {
     console.log(currentUser);
-
-    fetchAvailableSlots();
-  }, [selectedDate, fetchAvailableSlots]);
+    if (selectedDate) {
+      fetchAvailableSlotsForDate(selectedDate);
+    } else {
+      // Reset available slots and quantities when date is cleared
+      setAvailableSlots({ tnvr: 0, foster: 0 });
+      setDailyCapacity({ tnvr: 0, foster: 0 });
+      setTnvrSlotsToBook(0);
+      setFosterSlotsToBook(0);
+    }
+  }, [selectedDate, fetchAvailableSlotsForDate, currentUser]);
 
   // --- Calendar Logic ---
   const daysInMonth = (date) =>
@@ -157,10 +212,9 @@ export default function BookAppointmentPage() {
 
   const resetSelection = () => {
     setSelectedDate(null);
-    // setSelectedClinicId("")
-    setAvailableSlots({ tnvr: TNVR_CAPACITY, foster: FOSTER_CAPACITY });
     setTnvrSlotsToBook(0);
     setFosterSlotsToBook(0);
+    setNotes(""); // Clear notes on reset
   };
 
   const goToPreviousMonth = () => {
@@ -199,31 +253,42 @@ export default function BookAppointmentPage() {
     });
   };
 
-  const handleDaySelect = (day) => {
+  const handleDaySelect = async (day) => {
     if (day === null) return;
     const date = new Date(
       currentMonth.getFullYear(),
       currentMonth.getMonth(),
       day
     );
-    const dayOfWeek = date.getDay(); // 0 for Sunday, 1 for Monday, ..., 6 for Saturday
 
-    // Prevent selecting past dates and Thursday (4), Friday (5), Saturday (6)
-    if (
-      date < new Date().setHours(0, 0, 0, 0) ||
-      dayOfWeek === 4 ||
-      dayOfWeek === 5 ||
-      dayOfWeek === 6
-    ) {
-      console.log(
-        "Cannot select a past date or a day when the clinic is closed."
-      );
+    const dayOfWeek = date.getDay();
+    const isPast = date < new Date().setHours(0, 0, 0, 0);
+    const isClinicClosed =
+      dayOfWeek === 4 || dayOfWeek === 5 || dayOfWeek === 6; // Thursday, Friday, Saturday
+
+    if (isPast || isClinicClosed) return;
+
+    const docId = date.toISOString().split("T")[0]; // e.g., "YYYY-MM-DD"
+    const capacityData = appointmentCapacitiesMap[docId];
+
+    if (!capacityData) {
+      console.log("No capacity set for selected date.");
+      // Optionally, you can set an error or message to the user
+      setError("No capacity information available for this date.");
       return;
     }
+
+    const tnvrCap = capacityData.tnvrCapacity || 0;
+    const fosterCap = capacityData.fosterCapacity || 0;
+
+    if (tnvrCap === 0 && fosterCap === 0) {
+      console.log("Capacity is 0 for both services on this date.");
+      setError("No available slots for any service on this date.");
+      return;
+    }
+    setError(null); // Clear previous error if selection is valid
     setSelectedDate(date);
-    // setSelectedClinicId("");
-    setTnvrSlotsToBook(0);
-    setFosterSlotsToBook(0);
+    // Capacity and available slots will be set by the useEffect watching selectedDate
   };
 
   // --- Booking Logic ---
@@ -232,7 +297,6 @@ export default function BookAppointmentPage() {
     // Basic client-side validation
     if (
       !selectedDate ||
-      // !selectedClinicId ||
       (!tnvrSlotsToBook && !fosterSlotsToBook) ||
       !currentUser
     ) {
@@ -242,6 +306,14 @@ export default function BookAppointmentPage() {
 
     if (tnvrSlotsToBook < 0 || fosterSlotsToBook < 0) {
       setError("Number of slots cannot be negative.");
+      return;
+    }
+
+    if (
+      tnvrSlotsToBook > availableSlots.tnvr ||
+      fosterSlotsToBook > availableSlots.foster
+    ) {
+      setError("You are trying to book more slots than available.");
       return;
     }
 
@@ -257,10 +329,6 @@ export default function BookAppointmentPage() {
       const appointmentTimestamp = Timestamp.fromDate(appointmentDateTime);
       const nowTimestamp = Timestamp.now();
 
-      // const clinic = CLINICS.find((c) => c.id === selectedClinicId);
-      // const clinicAddress = clinic?.address || "";
-      // const clinicName = clinic?.name || "";
-
       const clinicAddress = CLINIC.address;
       const clinicName = CLINIC.name;
 
@@ -271,54 +339,95 @@ export default function BookAppointmentPage() {
       const appointmentsRef = collection(db, "appointments");
       const bookedAppointmentDetailsList = [];
 
-      // Create documents for TNVR slots
-      for (let i = 0; i < tnvrSlotsToBook; i++) {
-        const newAppointment = {
-          userId: currentUser.uid,
-          trapperFirstName: currentUser?.firstName || "",
-          trapperLastName: currentUser?.lastName || "",
-          trapperPhone: currentUser?.phone || "",
-          trapperNumber: currentUser?.trapperNumber || "",
-          serviceType: "TNVR",
-          clinicAddress: clinicAddress,
-          appointmentTime: appointmentTimestamp,
-          status: "Upcoming",
-          createdAt: nowTimestamp,
-          createdByUserId: currentUser.uid,
-          updatedAt: nowTimestamp,
-          lastModifiedByUserId: currentUser.uid,
-          notes: notes,
-        };
-        await addDoc(appointmentsRef, newAppointment);
-        bookedAppointmentDetailsList.push(newAppointment);
-      }
+      // Use a Firestore transaction to ensure atomicity
+      await runTransaction(db, async (transaction) => {
+        const docId = selectedDate.toISOString().split("T")[0]; // e.g., "YYYY-MM-DD"
+        const capacityDocRef = doc(db, "appointmentCapacities", docId);
+        const capacityDoc = await transaction.get(capacityDocRef);
 
-      // Create documents for Foster slots
-      for (let i = 0; i < fosterSlotsToBook; i++) {
-        const newAppointment = {
-          userId: currentUser.uid,
-          trapperFirstName: currentUser?.firstName || "",
-          trapperLastName: currentUser?.lastName || "",
-          trapperPhone: currentUser?.phone || "",
-          trapperNumber: currentUser?.trapperNumber || "",
-          serviceType: "Foster",
-          clinicAddress: clinicAddress,
-          appointmentTime: appointmentTimestamp,
-          status: "Upcoming",
-          createdAt: nowTimestamp,
-          createdByUserId: currentUser.uid,
+        if (!capacityDoc.exists()) {
+          throw new Error("Capacity document not found for this date.");
+        }
+
+        const currentCapacities = capacityDoc.data();
+        let currentTnvrBooked = currentCapacities.tnvrBooked || 0;
+        let currentFosterBooked = currentCapacities.fosterBooked || 0;
+        const totalTnvrCapacity = currentCapacities.tnvrCapacity || 0;
+        const totalFosterCapacity = currentCapacities.fosterCapacity || 0;
+
+        if (currentTnvrBooked + tnvrSlotsToBook > totalTnvrCapacity) {
+          throw new Error("Not enough TNVR slots available.");
+        }
+        if (currentFosterBooked + fosterSlotsToBook > totalFosterCapacity) {
+          throw new Error("Not enough Foster slots available.");
+        }
+
+        // Update the booked counts in the capacity document within the transaction
+        transaction.update(capacityDocRef, {
+          tnvrBooked: currentTnvrBooked + tnvrSlotsToBook,
+          fosterBooked: currentFosterBooked + fosterSlotsToBook,
           updatedAt: nowTimestamp,
-          lastModifiedByUserId: currentUser.uid,
-          notes: notes,
-        };
-        await addDoc(appointmentsRef, newAppointment);
-        bookedAppointmentDetailsList.push(newAppointment);
-      }
+        });
+
+        // Add documents for TNVR slots
+        for (let i = 0; i < tnvrSlotsToBook; i++) {
+          const newAppointment = {
+            userId: currentUser.uid,
+            trapperFirstName: currentUser?.firstName || "",
+            trapperLastName: currentUser?.lastName || "",
+            trapperPhone: currentUser?.phone || "",
+            trapperNumber: currentUser?.trapperNumber || "",
+            serviceType: "TNVR",
+            clinicAddress: clinicAddress,
+            appointmentTime: appointmentTimestamp,
+            status: "Upcoming",
+            createdAt: nowTimestamp,
+            createdByUserId: currentUser.uid,
+            updatedAt: nowTimestamp,
+            lastModifiedByUserId: currentUser.uid,
+            notes: notes,
+          };
+          // Add the new appointment document
+          transaction.set(doc(appointmentsRef), newAppointment); // Use transaction.set for new docs
+          bookedAppointmentDetailsList.push(newAppointment);
+        }
+
+        // Create documents for Foster slots
+        for (let i = 0; i < fosterSlotsToBook; i++) {
+          const newAppointment = {
+            userId: currentUser.uid,
+            trapperFirstName: currentUser?.firstName || "",
+            trapperLastName: currentUser?.lastName || "",
+            trapperPhone: currentUser?.phone || "",
+            trapperNumber: currentUser?.trapperNumber || "",
+            serviceType: "Foster",
+            clinicAddress: clinicAddress,
+            appointmentTime: appointmentTimestamp,
+            status: "Upcoming",
+            createdAt: nowTimestamp,
+            createdByUserId: currentUser.uid,
+            updatedAt: nowTimestamp,
+            lastModifiedByUserId: currentUser.uid,
+            notes: notes,
+          };
+          // Add the new appointment document
+          transaction.set(doc(appointmentsRef), newAppointment); // Use transaction.set for new docs
+          bookedAppointmentDetailsList.push(newAppointment);
+        }
+      });
 
       setBookingLoading(false);
+
+      const totalBookedCount = tnvrSlotsToBook + fosterSlotsToBook;
+
+      const userRef = doc(db, "users", currentUser.uid);
+      await updateDoc(userRef, {
+        "performanceMetrics.totalAppointmentsBooked":
+          increment(totalBookedCount),
+      });
       // Set confirmation details based on booked slots
       setBookedAppointmentDetails({
-        bookedCount: tnvrSlotsToBook + fosterSlotsToBook,
+        bookedCount: totalBookedCount,
         selectedDate: selectedDate,
         clinicName: clinicName,
         clinicAddress: clinicAddress,
@@ -332,16 +441,12 @@ export default function BookAppointmentPage() {
       setShowConfirmationModal(true);
 
       // Reset the form after successful booking
-      setSelectedDate(null);
-      // setSelectedClinicId("");
-      setTnvrSlotsToBook(0);
-      setFosterSlotsToBook(0);
-      setNotes("");
-      // Re-fetch availability after booking
-      fetchAvailableSlots();
+      resetSelection();
+      // Re-fetch availability after booking to show updated counts
+      fetchAvailableSlotsForDate(selectedDate);
     } catch (err) {
       console.error("Error booking appointment:", err);
-      setError("Failed to book appointment. Please try again.");
+      setError(err.message || "Failed to book appointment. Please try again.");
       setBookingLoading(false);
     }
   };
@@ -353,9 +458,9 @@ export default function BookAppointmentPage() {
     navigate("/appointments");
   };
 
-  // Calculate already booked slots based on available slots
-  const alreadyBookedTnvrSlots = TNVR_CAPACITY - availableSlots.tnvr;
-  const alreadyBookedFosterSlots = FOSTER_CAPACITY - availableSlots.foster;
+  // Calculate already booked slots based on available slots and daily capacity
+  const alreadyBookedTnvrSlots = dailyCapacity.tnvr - availableSlots.tnvr;
+  const alreadyBookedFosterSlots = dailyCapacity.foster - availableSlots.foster;
 
   // Calculate the total slots to display on the progress bar (already booked + user input)
   const displayedTotalBookedTnvr = alreadyBookedTnvrSlots + tnvrSlotsToBook;
@@ -416,6 +521,13 @@ export default function BookAppointmentPage() {
           const dayOfWeek = date ? date.getDay() : null;
           const isClinicClosed =
             dayOfWeek === 4 || dayOfWeek === 5 || dayOfWeek === 6; // Thursday, Friday, Saturday
+          const docId = date ? date.toISOString().split("T")[0] : null;
+          const capacityForDay = appointmentCapacitiesMap[docId];
+          const isCapacityMissing = !capacityForDay;
+          const isNoAvailableCapacity =
+            capacityForDay &&
+            capacityForDay.tnvrCapacity === 0 &&
+            capacityForDay.fosterCapacity === 0;
 
           return (
             <div
@@ -423,7 +535,11 @@ export default function BookAppointmentPage() {
               className={`p-2 rounded cursor-pointer
                 ${day === null ? "bg-purple-100" : ""}
                 ${
-                  day !== null && (isPastDate || isClinicClosed)
+                  day !== null &&
+                  (isPastDate ||
+                    isClinicClosed ||
+                    isCapacityMissing ||
+                    isNoAvailableCapacity)
                     ? "text-gray-300 cursor-not-allowed"
                     : ""
                 }
@@ -433,7 +549,11 @@ export default function BookAppointmentPage() {
                   currentMonth.getMonth() === selectedDate.getMonth() &&
                   currentMonth.getFullYear() === selectedDate.getFullYear()
                     ? "bg-accent-purple text-white font-bold"
-                    : day !== null && !isPastDate && !isClinicClosed
+                    : day !== null &&
+                      !isPastDate &&
+                      !isClinicClosed &&
+                      !isNoAvailableCapacity &&
+                      !isCapacityMissing
                     ? "hover:bg-tertiary-purple hover:text-primary-white"
                     : ""
                 }
@@ -446,33 +566,11 @@ export default function BookAppointmentPage() {
         })}
       </div>
 
-      {/* Clinic Selection */}
-      {/* {selectedDate && (
-        <div className="mt-8 p-4 bg-white rounded-lg shadow">
-          <h3 className="text-lg text-accent-purple font-semibold mb-4">
-            Select Clinic for {selectedDate.toLocaleDateString()}
-          </h3>
-          <select
-            className="w-full p-2 border rounded-lg outline-none border-tertiary-purple focus:border-accent-purple"
-            value={selectedClinicId}
-            onChange={(e) => setSelectedClinicId(e.target.value)}
-          >
-            <option value="">-- Select a Clinic --</option>
-            {CLINICS.map((clinic) => (
-              <option key={clinic.id} value={clinic.id}>
-                {clinic.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )} */}
-
       {/* Available Slots and Slot Quantity Selection */}
-      {selectedDate && ( // Condition changed from selectedDate && selectedClinicId
+      {selectedDate && (
         <div className="mt-4 p-4 bg-white rounded-lg shadow">
           <h3 className="text-lg text-accent-purple font-semibold mb-4">
             Available Slots for {selectedDate.toLocaleDateString()} at{" "}
-            {/* {CLINICS.find((c) => c.id === selectedClinicId)?.name} */}
             {CLINIC.name}
           </h3>
 
@@ -521,13 +619,14 @@ export default function BookAppointmentPage() {
                           className="h-full bg-accent-purple transition-all duration-300 ease-in-out"
                           style={{
                             width: `${
-                              (displayedTotalBookedTnvr / TNVR_CAPACITY) * 100
+                              (displayedTotalBookedTnvr / dailyCapacity.tnvr) *
+                              100
                             }%`,
                           }}
                         ></div>
                       </div>
                       <span className="px-2 py-1 rounded-md bg-accent-purple text-primary-white font-semibold text-sm">
-                        {displayedTotalBookedTnvr}/{TNVR_CAPACITY}
+                        {displayedTotalBookedTnvr}/{dailyCapacity.tnvr}
                       </span>
                     </div>
                   </div>
@@ -568,14 +667,15 @@ export default function BookAppointmentPage() {
                           className="h-full bg-accent-purple transition-all duration-300 ease-in-out"
                           style={{
                             width: `${
-                              (displayedTotalBookedFoster / FOSTER_CAPACITY) *
+                              (displayedTotalBookedFoster /
+                                dailyCapacity.foster) *
                               100
                             }%`,
                           }}
                         ></div>
                       </div>
                       <span className="px-2 py-1 rounded-md bg-accent-purple text-primary-white font-semibold text-sm">
-                        {displayedTotalBookedFoster}/{FOSTER_CAPACITY}
+                        {displayedTotalBookedFoster}/{dailyCapacity.foster}
                       </span>
                     </div>
                   </div>

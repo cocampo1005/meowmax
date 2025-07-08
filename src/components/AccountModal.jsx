@@ -138,15 +138,11 @@ export default function AccountModal({ isOpen, onClose, onSave, initialData }) {
           </div>
 
           {isSuccess ? (
-            <div className="text-center">
+            <div className="flex flex-col items-center justify-center space-y-4">
               <p className="text-success-green font-semibold text-lg mb-4">
                 ✅ Account successfully saved!
               </p>
-              <button
-                type="button"
-                onClick={onClose}
-                className="bg-accent-purple] text-primary-white] px-4 py-2 rounded-lg hover:bg-secondary-purple]"
-              >
+              <button type="button" onClick={onClose} className="button">
                 Okay
               </button>
             </div>

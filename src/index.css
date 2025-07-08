@@ -9,7 +9,7 @@
   --color-accent-purple: #631c8c; /* Accent purple for buttons */
   --color-primary-white: #ffffff; /*Primary light for text */
   --color-error-red: #f54c70; /* Red for errors canceling */
-  --color-error-red-hov: #f292a7; /* Red for hover state */
+  --color-error-red-hov: oklch(57.7% 0.245 27.325); /* Red for hover state */
   --color-error-red-act: #e91e4a; /* Red for active state */
   --color-success-green: #95cf8a; /* Success green for success messages */
 }

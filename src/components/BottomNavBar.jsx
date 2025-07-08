@@ -1,55 +1,71 @@
-import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, CalendarDays, User } from "lucide-react";
+import { Home, CalendarDays, User, Users, ClipboardList } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 
 const BottomNavBar = () => {
   const location = useLocation();
+  const { currentUser } = useAuth();
 
   const isActive = (path) => location.pathname === path;
 
+  const navItemClass = (path) =>
+    `flex flex-col items-center justify-center text-sm font-medium transition-colors ${
+      isActive(path)
+        ? "text-accent-purple bg-[radial-gradient(ellipse_at_center,_rgba(192,_132,_252,_0.3)_0%,_transparent_70%)]"
+        : "text-gray-500 hover:text-accent-purple"
+    }`;
+
   return (
-    <nav className="fixed bottom-0 left-0 z-50 w-full bg-primary-light-purple shadow-[0_-4px_6px_-1px_rgb(216_203_230_/0.75),_0_-2px_4px_-2px_rgb(216_203_230_/0.05)]">
+    <nav className="fixed bottom-0 left-0 z-50 w-full bg-primary-light-purple shadow-[0_-4px_6px_-1px_rgb(216_203_230_/0.75),_0_-2px_4px_-2px_rgb(216_203_230_/0.05)] md:hidden">
       <div className="container mx-auto px-4">
         <div className="flex justify-around items-center h-16">
           {/* Home Link */}
-          <Link
-            to="/"
-            className={`flex flex-col items-center justify-center text-sm font-medium transition-colors ${
-              isActive("/")
-                ? "text-accent-purple bg-[radial-gradient(ellipse_at_center,_rgba(192,_132,_252,_0.3)_0%,_transparent_70%)]"
-                : "text-gray-500 hover:text-accent-purple" // Highlight active link
-            }`}
-            aria-label="Home"
-          >
-            <Home size={24} /> {/* Home icon */}
+          <Link to="/" className={navItemClass("/")} aria-label="Home">
+            <Home size={24} />
             <span>Home</span>
           </Link>
 
-          {/* Appointments Link */}
+          {/* Appointments */}
           <Link
             to="/appointments"
-            className={`flex flex-col items-center justify-center text-sm font-medium transition-colors ${
-              isActive("/appointments")
-                ? "text-accent-purple bg-[radial-gradient(ellipse_at_center,_rgba(192,_132,_252,_0.3)_0%,_transparent_70%)]"
-                : "text-gray-500 hover:text-accent-purple" // Highlight active link
-            }`}
+            className={navItemClass("/appointments")}
             aria-label="Appointments"
           >
-            <CalendarDays size={24} /> {/* Calendar icon */}
+            <CalendarDays size={24} />
             <span>Appointments</span>
           </Link>
 
-          {/* Profile Link */}
+          {/* Admin-only: Accounts Manager */}
+          {currentUser?.role === "admin" && (
+            <Link
+              to="/accounts-manager"
+              className={navItemClass("/accounts-manager")}
+              aria-label="Accounts Manager"
+            >
+              <Users size={24} />
+              <span>Accounts</span>
+            </Link>
+          )}
+
+          {/* Admin-only: Appointments Manager */}
+          {currentUser?.role === "admin" && (
+            <Link
+              to="/appointments-manager"
+              className={navItemClass("/appointments-manager")}
+              aria-label="Appointments Manager"
+            >
+              <ClipboardList size={24} />
+              <span>Manage</span>
+            </Link>
+          )}
+
+          {/* Profile */}
           <Link
             to="/profile"
-            className={`flex flex-col items-center justify-center text-sm font-medium transition-colors ${
-              isActive("/profile")
-                ? "text-accent-purple bg-[radial-gradient(ellipse_at_center,_rgba(192,_132,_252,_0.3)_0%,_transparent_70%)]"
-                : "text-gray-500 hover:text-accent-purple" // Highlight active link
-            }`}
+            className={navItemClass("/profile")}
             aria-label="Profile"
           >
-            <User size={24} /> {/* User icon */}
+            <User size={24} />
             <span>Profile</span>
           </Link>
         </div>

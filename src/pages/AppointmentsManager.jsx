@@ -5,12 +5,14 @@ import {
   where,
   orderBy,
   getDocs,
+  getDoc,
   Timestamp,
   deleteDoc,
   doc,
   writeBatch,
-  addDoc, // For creating new appointments
-  updateDoc, // For editing appointments
+  addDoc,
+  updateDoc,
+  setDoc,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
@@ -19,10 +21,6 @@ import ConfirmationModal from "../components/ConfirmationModal";
 import AppointmentModal from "../components/AppointmentModal"; // Import the new modal
 import { ChevronLeft, ChevronRight, Edit, Plus } from "lucide-react"; // Add calendar nav, Edit and Plus icons
 import { ChevronDown, ChevronUp, NotesIcon } from "../svgs/Icons";
-
-// Max appointment counts for each service type
-const MAX_TNVR_APPOINTMENTS = 70;
-const MAX_FOSTER_APPOINTMENTS = 10;
 
 // Helper to find the next available date
 const findNextAvailableDate = (startDate) => {
@@ -66,6 +64,13 @@ export default function AppointmentsManager() {
   const [expandedGroupKey, setExpandedGroupKey] = useState(null);
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [currentNote, setCurrentNote] = useState("");
+
+  // Capacity for maximum appointments per service type
+  const [capacity, setCapacity] = useState({ tnvr: 0, foster: 0 });
+  const [showCapacityModal, setShowCapacityModal] = useState(false);
+  const [editingServiceType, setEditingServiceType] = useState(null);
+  const [newCapacityValue, setNewCapacityValue] = useState("");
+  const [savingCapacity, setSavingCapacity] = useState(false);
 
   // States for confirmation modals (for individual and group deletions)
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -239,9 +244,32 @@ export default function AppointmentsManager() {
     }
   }, [selectedDate]);
 
+  // Fetches the capacity for TNVR and Foster appointments for the selected date
+  const fetchCapacityForDate = async (date) => {
+    try {
+      const docId = date.toISOString().split("T")[0];
+      const snapshot = await getDoc(doc(db, "appointmentCapacities", docId));
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        setCapacity({
+          tnvr: data.tnvrCapacity || 0,
+          foster: data.fosterCapacity || 0,
+        });
+      } else {
+        setCapacity({ tnvr: 0, foster: 0 }); // Default when not set
+      }
+    } catch (err) {
+      console.error("Error fetching capacity:", err);
+      setCapacity({ tnvr: 0, foster: 0 });
+    }
+  };
+
   // Effect hook to trigger fetching appointments when the selected date changes
   useEffect(() => {
     fetchAppointmentsForSelectedDay();
+    if (selectedDate) {
+      fetchCapacityForDate(selectedDate);
+    }
   }, [selectedDate, fetchAppointmentsForSelectedDay]);
 
   // Toggles the expansion state of an individual appointment card
@@ -393,6 +421,36 @@ export default function AppointmentsManager() {
     }
   };
 
+  const handleSaveCapacity = async () => {
+    if (!selectedDate || !editingServiceType) return;
+    setSavingCapacity(true);
+
+    try {
+      const docId = selectedDate.toISOString().split("T")[0];
+      const docRef = doc(db, "appointmentCapacities", docId);
+      const existing = await getDoc(docRef);
+
+      const data = existing.exists() ? existing.data() : {};
+      const updatedData = {
+        ...data,
+        [editingServiceType === "TNVR" ? "tnvrCapacity" : "fosterCapacity"]:
+          parseInt(newCapacityValue, 10),
+        updatedAt: Timestamp.now(),
+        updatedBy: currentUser.uid,
+      };
+
+      await setDoc(docRef, updatedData);
+      setShowCapacityModal(false);
+      setEditingServiceType(null);
+      setNewCapacityValue("");
+      fetchCapacityForDate(selectedDate); // Refresh UI
+    } catch (err) {
+      console.error("Error saving capacity:", err);
+    } finally {
+      setSavingCapacity(false);
+    }
+  };
+
   // --- Grouping Logic for Display ---
   // Groups fetched appointments by service type, trapper number, and trapper name
   const groupedAppointments = appointments.reduce((acc, appointment) => {
@@ -428,6 +486,16 @@ export default function AppointmentsManager() {
   const fosterAppointmentsCount = appointments.filter(
     (app) => app.serviceType === "Foster"
   ).length;
+
+  if (currentUser?.role !== "admin") {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <h1 className="text-2xl font-bold text-error-red">
+          You do not have permission to access this page.
+        </h1>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -550,9 +618,7 @@ export default function AppointmentsManager() {
         <div className="flex-grow overflow-visible">
           {loading ? (
             <LoadingSpinner />
-          ) : selectedDate &&
-            (tnvrGroupedAppointments.length > 0 ||
-              fosterGroupedAppointments.length > 0) ? (
+          ) : (
             <div className="space-y-8">
               {/* TNVR Appointments Section */}
               <div>
@@ -564,15 +630,26 @@ export default function AppointmentsManager() {
                         className="h-full bg-accent-purple transition-all duration-300 ease-in-out"
                         style={{
                           width: `${
-                            (tnvrAppointmentsCount / MAX_TNVR_APPOINTMENTS) *
-                            100
+                            capacity.tnvr
+                              ? (tnvrAppointmentsCount / capacity.tnvr) * 100
+                              : 0
                           }%`,
                         }}
                       ></div>
                     </div>
                     <span className="px-2 py-1 rounded-md bg-accent-purple text-primary-white font-semibold text-sm">
-                      {tnvrAppointmentsCount}/{MAX_TNVR_APPOINTMENTS}
+                      {tnvrAppointmentsCount}/{capacity.tnvr}
                     </span>
+                    <button
+                      onClick={() => {
+                        setEditingServiceType("TNVR");
+                        setNewCapacityValue(capacity.tnvr);
+                        setShowCapacityModal(true);
+                      }}
+                      className="flex items-center justify-center ml-2 h-7 w-8  rounded-md bg-secondary-purple text-primary-white hover:bg-accent-purple transition-colors duration-200 hover:cursor-pointer"
+                    >
+                      <Edit size={16} />
+                    </button>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -745,16 +822,27 @@ export default function AppointmentsManager() {
                         className="h-full bg-accent-purple transition-all duration-300 ease-in-out"
                         style={{
                           width: `${
-                            (fosterAppointmentsCount /
-                              MAX_FOSTER_APPOINTMENTS) *
-                            100
+                            capacity.foster
+                              ? (fosterAppointmentsCount / capacity.foster) *
+                                100
+                              : 0
                           }%`,
                         }}
                       ></div>
                     </div>
                     <span className="px-2 py-1 rounded-md bg-accent-purple text-primary-white font-semibold text-sm">
-                      {fosterAppointmentsCount}/{MAX_FOSTER_APPOINTMENTS}
+                      {fosterAppointmentsCount}/{capacity.foster}
                     </span>
+                    <button
+                      onClick={() => {
+                        setEditingServiceType("Foster");
+                        setNewCapacityValue(capacity.foster);
+                        setShowCapacityModal(true);
+                      }}
+                      className="flex items-center justify-center ml-2 h-7 w-8  rounded-md bg-secondary-purple text-primary-white hover:bg-accent-purple transition-colors duration-200 hover:cursor-pointer"
+                    >
+                      <Edit size={16} />
+                    </button>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -918,22 +1006,26 @@ export default function AppointmentsManager() {
                 </div>
               </div>
             </div>
-          ) : selectedDate ? (
-            <div className="text-center text-gray-600 mt-8">
-              No appointments found for this day.
-            </div>
-          ) : (
-            <div className="text-center text-gray-600 mt-8">
-              Select a date from the calendar to view appointments.
-            </div>
           )}
         </div>
 
         {/* Individual Delete Confirmation Modal */}
         <ConfirmationModal
           isOpen={showCancelModal}
-          title="Confirm Deletion"
-          message={`Are you sure you want to release this ${appointmentToCancel?.serviceType} appointment for ${appointmentToCancel?.trapperNumber} - ${appointmentToCancel?.trapperFirstName} ${appointmentToCancel?.trapperLastName}? This action cannot be undone.`}
+          title="Confirm Release"
+          message={
+            <>
+              Are you sure you want to release this{" "}
+              <strong>{appointmentToCancel?.serviceType}</strong> appointment
+              for{" "}
+              <strong>
+                {appointmentToCancel?.trapperNumber} –{" "}
+                {appointmentToCancel?.trapperFirstName}{" "}
+                {appointmentToCancel?.trapperLastName}
+              </strong>
+              ? This action cannot be undone.
+            </>
+          }
           onConfirm={confirmCancelAppointment}
           onClose={() => setShowCancelModal(false)}
           isSubmitting={isDeletingIndividual}
@@ -942,8 +1034,19 @@ export default function AppointmentsManager() {
         {/* Group Delete Confirmation Modal */}
         <ConfirmationModal
           isOpen={showDeleteAllModal}
-          title="Confirm Group Deletion"
-          message={`Are you sure you want to release all ${groupToDelete?.serviceType} appointments for ${groupToDelete?.trapperNumber} - ${groupToDelete?.trapperFirstName} ${groupToDelete?.trapperLastName} for this day? This action cannot be undone.`}
+          title="Confirm Release All"
+          message={
+            <>
+              Are you sure you want to release{" "}
+              <strong>all {groupToDelete?.serviceType}</strong> appointments for{" "}
+              <strong>
+                {groupToDelete?.trapperNumber} –{" "}
+                {groupToDelete?.trapperFirstName}{" "}
+                {groupToDelete?.trapperLastName}
+              </strong>{" "}
+              for this day? This action cannot be undone.
+            </>
+          }
           onConfirm={confirmDeleteAllAppointments}
           onClose={() => setShowDeleteAllModal(false)}
           isSubmitting={isDeletingGroup}
@@ -959,6 +1062,51 @@ export default function AppointmentsManager() {
           }}
           initialDate={initialDateForCreate || selectedDate} // Pre-fill date for new appointments
         />
+
+        {showCapacityModal && (
+          <div className="fixed inset-0 flex items-center justify-center z-50">
+            <div className="absolute w-screen h-screen bg-slate-900 opacity-60"></div>
+            <div className="bg-white p-6 rounded-xl shadow-xl z-100 max-w-sm w-full">
+              <h2 className="text-lg font-bold mb-4 text-primary-dark-purple">
+                Edit {editingServiceType} Capacity for{" "}
+                {selectedDate?.toLocaleDateString("en-US", {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </h2>
+
+              <input
+                type="number"
+                min="0"
+                value={newCapacityValue}
+                onChange={(e) => setNewCapacityValue(e.target.value)}
+                className="input w-full mb-4"
+              />
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowCapacityModal(false);
+                    setEditingServiceType(null);
+                    setNewCapacityValue("");
+                  }}
+                  className="outline-button"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveCapacity}
+                  className="button mt-4"
+                  disabled={savingCapacity}
+                >
+                  {savingCapacity ? "Saving..." : "Save"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

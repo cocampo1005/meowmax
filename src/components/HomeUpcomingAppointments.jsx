@@ -34,14 +34,14 @@ export default function HomeUpcomingAppointments() {
     setLoading(true);
     try {
       const appointmentsCollectionRef = collection(db, "appointments");
-      const nowTimestamp = Timestamp.now();
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
 
       // Fetch more appointments than needed to ensure we get at least 3 unique dates
-      // Adjust the limit based on how many appointments a user typically books per date/clinic
       const q = query(
         appointmentsCollectionRef,
         where("userId", "==", userId),
-        where("appointmentTime", ">=", nowTimestamp),
+        where("appointmentTime", ">=", Timestamp.fromDate(todayStart)),
         orderBy("appointmentTime", "asc"),
         limit(20) // Fetch up to 20 appointments to find the next few dates
       );

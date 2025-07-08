@@ -24,7 +24,7 @@ export default function ConfirmationModal({
           <button
             type="button"
             onClick={onClose}
-            className="py-2 px-4 font-bold border-2 rounded-lg hover:bg-purple-50"
+            className="outline-button"
             disabled={isDeleting}
           >
             Cancel
@@ -32,8 +32,10 @@ export default function ConfirmationModal({
           <button
             type="button"
             onClick={onConfirm}
-            className={`bg-error-red text-primary-white px-4 py-2 rounded-lg flex items-center ${
-              isDeleting ? "opacity-50 cursor-not-allowed" : "hover:bg-red-600"
+            className={`red-button ${
+              isDeleting
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:bg-red-600 hover:cursor-pointer"
             }`}
             disabled={isDeleting}
           >
