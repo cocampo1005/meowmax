@@ -54,6 +54,26 @@ exports.updatePastAppointmentsStatus = onSchedule(
         });
       });
 
+      // Count completed appointments per trapper
+      const completionsPerUser = {};
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        const userId = data.userId;
+        if (!userId) return;
+
+        completionsPerUser[userId] = (completionsPerUser[userId] || 0) + 1;
+      });
+
+      // Update trapper metrics
+      Object.entries(completionsPerUser).forEach(([userId, count]) => {
+        const userRef = firestore.collection("users").doc(userId);
+        batch.update(userRef, {
+          "performanceMetrics.totalAppointmentsCompleted":
+            admin.firestore.FieldValue.increment(count),
+        });
+      });
+
       await batch.commit();
 
       logger.info(

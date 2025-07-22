@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getMessaging } from "firebase/messaging/sw";
+import { getMessaging, onMessage } from "firebase/messaging";
 import { onBackgroundMessage } from "firebase/messaging/sw";
 
 const firebaseConfig = {

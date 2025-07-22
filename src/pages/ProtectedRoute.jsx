@@ -28,7 +28,7 @@ export default function ProtectedRoute() {
             <LogoHorizontal />
           </Link>
           {/* Main content area */}
-          <div className="pt-16 md:p-6 flex-grow relative">
+          <div className="pt-16 md:p-6 overflow-auto relative">
             <Outlet />
           </div>
         </div>

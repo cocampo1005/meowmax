@@ -4,7 +4,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getFunctions } from "firebase/functions";
-import { getMessaging } from "firebase/messaging";
+import { getMessaging, getToken } from "firebase/messaging";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -23,3 +23,22 @@ export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const functions = getFunctions(app);
 export const messaging = getMessaging(app);
+
+export const generateToken = async () => {
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission === "granted") {
+      const token = await getToken(messaging, {
+        vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+      });
+      console.log("FCM Token:", token);
+      return token;
+    } else {
+      console.error("Notification permission not granted");
+      return null;
+    }
+  } catch (error) {
+    console.error("Error generating FCM token:", error);
+    throw error;
+  }
+};

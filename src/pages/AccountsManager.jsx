@@ -49,10 +49,16 @@ export default function AccountsManager() {
     let q = query(usersRef, orderBy("trapperNumber", "asc"));
 
     const querySnapshot = await getDocs(q);
-    const userList = querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const userList = querySnapshot.docs
+      .map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+      .sort((a, b) => {
+        const numA = parseInt(a.trapperNumber, 10);
+        const numB = parseInt(b.trapperNumber, 10);
+        return numA - numB;
+      });
     setUsers(userList);
   };
 
@@ -198,7 +204,7 @@ export default function AccountsManager() {
   };
 
   const confirmDelete = async () => {
-    if (currentUser) {
+    if (!currentUser) {
       console.error("User is not authenticated. Cannot delete user.");
       alert("Authentication error. Please log in again.");
       return;
@@ -241,7 +247,7 @@ export default function AccountsManager() {
 
   return (
     <>
-      <header className="w-full flex justify-between border-b-2 border-tertiary-purple p-8">
+      <header className="w-full flex flex-col md:flex-row justify-between border-b-2 border-tertiary-purple p-8">
         <h1 className="font-bold text-2xl text-primary-dark-purple">
           Manage Accounts
         </h1>
@@ -295,16 +301,17 @@ export default function AccountsManager() {
         />
       )}
 
-      <section className="p-8 max-h-screen flex flex-col gap-8">
+      <section className="p-8 flex mb-16 md:mb-0 flex-col gap-8 overflow-y-auto md:max-h-[calc(100vh-10.5rem)]">
         {selectedUserDetails && (
           <article className="rounded-xl flex justify-between flex-shrink-0 gap-8 px-8 p-4 bg-primary-light-purple text-primary-dark-purple">
             <div>
               <h2 className="text-2xl font-bold mb-4">
+                {selectedUserDetails.trapperNumber} -{" "}
                 {selectedUserDetails.firstName} {selectedUserDetails.lastName}
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
                 <div>
-                  <h3 className="text-xl font-semibold mb-2">User Info:</h3>
+                  <h3 className="text-xl font-semibold mb-2">Contact Info:</h3>
                   <p>
                     <strong>Email:</strong> {selectedUserDetails.email}
                   </p>
@@ -322,25 +329,43 @@ export default function AccountsManager() {
                   <p>
                     <strong>Address:</strong> {selectedUserDetails.address}
                   </p>
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold mb-2">Trapper Info:</h3>
                   <p>
                     <strong>Code:</strong> {selectedUserDetails.code}
                   </p>
                   <p>
                     <strong>Equipment:</strong> {selectedUserDetails.equipment}
                   </p>
-                  {/* Display Trapper Region */}
                   <p>
                     <strong>Trapper Region:</strong>{" "}
                     {selectedUserDetails.trapperRegion || "N/A"}
                   </p>
+                  <p>
+                    <strong>Recovery Space Limit:</strong>{" "}
+                    {selectedUserDetails.recoverySpaceLimit ?? "N/A"}
+                  </p>
+                  <p>
+                    <strong>Foster Capability:</strong>{" "}
+                    {selectedUserDetails.fosterCapability
+                      ? Object.entries(selectedUserDetails.fosterCapability)
+                          .filter(([_, val]) => val === true)
+                          .map(
+                            ([key]) =>
+                              key.charAt(0).toUpperCase() + key.slice(1)
+                          )
+                          .join(", ") || "None"
+                      : "N/A"}
+                  </p>
                 </div>
-                {/* NEW: Display Performance Metrics */}
+                {/* Performance Metrics */}
                 <div>
                   <div className="flex items-center gap-4">
                     <h3 className="text-xl font-semibold mb-2">
                       Performance Metrics:
                     </h3>
-                    {/* NEW: Button to open Performance Metrics Modal */}
+                    {/* Button to open Performance Metrics Modal */}
                     <button
                       onClick={handleEditMetricsClick}
                       disabled={!selectedUserId}
@@ -451,11 +476,7 @@ export default function AccountsManager() {
         </div>
 
         <div
-          className={`w-full rounded-xl relative overflow-x-auto overflow-y-auto flex-grow ${
-            selectedUserDetails
-              ? "max-h-[calc(100vh-350px)]"
-              : "max-h-[calc(100vh-150px)]"
-          }`}
+          className={`w-full rounded-xl relative overflow-x-auto overflow-y-auto flex-grow`}
         >
           <div className="rounded-xl">
             <table className="w-full min-w-full divide-y rounded-xl divide-tertiary-purple">
@@ -467,10 +488,10 @@ export default function AccountsManager() {
                   <th className="px-6 py-3 text-left">Code</th>
                   <th className="px-6 py-3 text-left">Phone</th>
                   <th className="px-6 py-3 text-left">Region</th>
-                  <th className="px-6 py-3 text-left">Eqpt</th>
+                  <th className="px-6 py-3 text-right">Eqpt</th>
                 </tr>
               </thead>
-              <tbody className="bg-primary-white divide-y divide-gray-300 max-h-[calc(100vh-550px) text-primary-dark-purple hover:cursor-pointer">
+              <tbody className="bg-primary-white divide-y divide-gray-300 text-primary-dark-purple hover:cursor-pointer">
                 {filteredUsers?.map((user) => (
                   <tr
                     key={user.id}
@@ -490,7 +511,7 @@ export default function AccountsManager() {
                     </td>
                     <td className="px-6 py-4">{user.trapperRegion || "N/A"}</td>
                     <td className="px-6 py-4 text-right">
-                      {user.equipment || "N/A"}
+                      {user.equipment ?? "N/A"}
                     </td>
                   </tr>
                 ))}

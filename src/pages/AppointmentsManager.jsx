@@ -13,6 +13,7 @@ import {
   addDoc,
   updateDoc,
   setDoc,
+  increment,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
@@ -402,21 +403,36 @@ export default function AppointmentsManager() {
   // Handles saving an appointment (either creating new or updating existing)
   const handleSaveAppointment = async (data) => {
     try {
+      if (!data || data.length === 0) return;
+
+      const trapperUid = data[0].userId;
+      if (!trapperUid) {
+        console.warn("Missing trapper userId. Cannot update metrics.");
+        return;
+      }
+
       const batch = writeBatch(db);
+
       data.forEach((newAppointment) => {
         const newDocRef = doc(collection(db, "appointments"));
         batch.set(newDocRef, {
           ...newAppointment,
           createdByUserId: currentUser.uid,
           lastModifiedByUserId: currentUser.uid,
-          userId: newAppointment.userId || currentUser.uid,
+          userId: trapperUid,
         });
       });
-      await batch.commit(); // Commit all new appointments
-      console.log("New appointment(s) successfully created.");
+
+      await batch.commit();
+      console.log("Appointments created successfully.");
+
+      // Update the trapper's performance metrics
+      const userRef = doc(db, "users", trapperUid);
+      await updateDoc(userRef, {
+        "performanceMetrics.totalAppointmentsBooked": increment(data.length),
+      });
     } catch (error) {
       console.error("Error saving appointment:", error);
-      console.log("Failed to save appointment. Please try again.");
       throw error;
     }
   };
@@ -499,7 +515,7 @@ export default function AppointmentsManager() {
 
   return (
     <>
-      <header className="w-full flex justify-between border-b-2 border-tertiary-purple p-8">
+      <header className="w-full flex flex-col md:flex-row justify-between border-b-2 border-tertiary-purple p-8">
         <h1 className="font-bold text-2xl text-primary-dark-purple flex items-center gap-2">
           Manage Appointments
         </h1>
@@ -511,7 +527,7 @@ export default function AppointmentsManager() {
         </button>
       </header>
 
-      <div className="px-4 pt-4 md:p-8">
+      <div className="px-4 pt-4 mb-20 md:mb-0 md:p-8">
         {/* Calendar Header */}
         <div className="flex justify-between items-center mb-4">
           <button
