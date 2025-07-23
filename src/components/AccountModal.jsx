@@ -248,7 +248,7 @@ export default function AccountModal({ isOpen, onClose, onSave, initialData }) {
                   value={formData.email}
                   onChange={handleInputChange}
                   className="input"
-                  disabled={!!initialData} // Disable email field when editing
+                  disabled={false}
                 />
               </div>
 
@@ -330,6 +330,15 @@ export default function AccountModal({ isOpen, onClose, onSave, initialData }) {
                   />
                 </div>
               </div>
+
+              {initialData && (
+                <div className="p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-900 rounded-md text-sm">
+                  <strong>Note:</strong> If you change this user’s{" "}
+                  <strong>email</strong> or <strong>code</strong>, it will also
+                  update their login credentials. Be sure to notify the trapper
+                  of these changes.
+                </div>
+              )}
 
               <div className="flex justify-end space-x-4 mt-6">
                 <button

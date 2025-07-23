@@ -448,3 +448,36 @@ exports.changeUserPassword = onCall(async (request) => {
     }
   }
 });
+
+// Function to change a user's email for Auth
+exports.changeUserEmail = onCall(async (request) => {
+  logger.info("changeUserEmail function invoked.");
+
+  if (!request.auth) {
+    logger.error("Unauthenticated call to changeUserEmail.");
+    throw new HttpsError("unauthenticated", "You must be signed in.");
+  }
+
+  const callerUid = request.auth.uid;
+  const callerDoc = await firestore.collection("users").doc(callerUid).get();
+  if (!callerDoc.exists || callerDoc.data().role !== "admin") {
+    throw new HttpsError("permission-denied", "Only admins can change email.");
+  }
+
+  const { uid, newEmail } = request.data;
+
+  if (!uid || !newEmail) {
+    throw new HttpsError("invalid-argument", "UID and new email are required.");
+  }
+
+  try {
+    await auth.updateUser(uid, { email: newEmail });
+    await firestore.collection("users").doc(uid).update({ email: newEmail });
+
+    logger.info(`Successfully changed email for user ${uid} to ${newEmail}`);
+    return { success: true, message: "Email updated successfully." };
+  } catch (error) {
+    logger.error("Error changing user email:", error);
+    throw new HttpsError("internal", error.message || "Email update failed.");
+  }
+});

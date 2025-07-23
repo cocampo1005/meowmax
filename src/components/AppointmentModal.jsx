@@ -22,8 +22,8 @@ const CLINIC = {
 };
 
 // Constants for slot capacity (assuming these are global capacities for the clinic)
-const TNVR_CAPACITY = 70;
-const FOSTER_CAPACITY = 10;
+// const TNVR_CAPACITY = 70;
+// const FOSTER_CAPACITY = 10;
 
 export default function AppointmentModal({
   isOpen,
@@ -49,9 +49,11 @@ export default function AppointmentModal({
 
   // Availability states
   const [availableSlots, setAvailableSlots] = useState({
-    tnvr: TNVR_CAPACITY,
-    foster: FOSTER_CAPACITY,
+    tnvr: 0,
+    foster: 0,
   });
+  const [dailyCapacity, setDailyCapacity] = useState({ tnvr: 0, foster: 0 });
+
   const [loadingSlots, setLoadingSlots] = useState(false);
 
   // User data for dropdown and metadata
@@ -188,8 +190,8 @@ export default function AppointmentModal({
   // Function to fetch available slots - Adapted from BookAppointment.jsx
   const fetchAvailableSlots = useCallback(async () => {
     if (!selectedDate) {
-      setAvailableSlots({ tnvr: TNVR_CAPACITY, foster: FOSTER_CAPACITY });
-      // Don't reset slotsToBook here in edit mode
+      setAvailableSlots({ tnvr: 0, foster: 0 });
+      setDailyCapacity({ tnvr: 0, foster: 0 });
       if (!isEditMode) {
         setTnvrSlotsToBook(0);
         setFosterSlotsToBook(0);
@@ -199,13 +201,27 @@ export default function AppointmentModal({
 
     setLoadingSlots(true);
     setError(null);
-    // In create mode, reset slots to book when date changes
     if (!isEditMode) {
       setTnvrSlotsToBook(0);
       setFosterSlotsToBook(0);
     }
 
     try {
+      const docId = selectedDate.toISOString().split("T")[0];
+      const capacityDocRef = doc(db, "appointmentCapacities", docId);
+      const capacityDoc = await getDoc(capacityDocRef);
+
+      let tnvrCap = 0;
+      let fosterCap = 0;
+
+      if (capacityDoc.exists()) {
+        const data = capacityDoc.data();
+        tnvrCap = data.tnvrCapacity || 0;
+        fosterCap = data.fosterCapacity || 0;
+      }
+
+      setDailyCapacity({ tnvr: tnvrCap, foster: fosterCap });
+
       const startOfDay = new Date(
         selectedDate.getFullYear(),
         selectedDate.getMonth(),
@@ -237,25 +253,20 @@ export default function AppointmentModal({
 
       querySnapshot.forEach((doc) => {
         const appt = doc.data();
-        // Exclude the current appointment being edited from the count for accurate availability
-        if (appointment && doc.id === appointment.id) {
-          return;
-        }
-        if (appt.serviceType === "TNVR") {
-          bookedTNVR++;
-        } else if (appt.serviceType === "Foster") {
-          bookedFoster++;
-        }
+        if (appointment && doc.id === appointment.id) return;
+        if (appt.serviceType === "TNVR") bookedTNVR++;
+        else if (appt.serviceType === "Foster") bookedFoster++;
       });
 
       setAvailableSlots({
-        tnvr: TNVR_CAPACITY - bookedTNVR,
-        foster: FOSTER_CAPACITY - bookedFoster,
+        tnvr: tnvrCap - bookedTNVR,
+        foster: fosterCap - bookedFoster,
       });
     } catch (err) {
       console.error("Error fetching available slots:", err);
       setError("Failed to load available slots.");
       setAvailableSlots({ tnvr: 0, foster: 0 });
+      setDailyCapacity({ tnvr: 0, foster: 0 });
     } finally {
       setLoadingSlots(false);
     }
@@ -489,8 +500,8 @@ export default function AppointmentModal({
   const saveButtonText = isEditMode ? "Save Changes" : "Book Appointment";
 
   // Calculate already booked slots based on available slots
-  const alreadyBookedTnvrSlots = TNVR_CAPACITY - availableSlots.tnvr;
-  const alreadyBookedFosterSlots = FOSTER_CAPACITY - availableSlots.foster;
+  const alreadyBookedTnvrSlots = dailyCapacity.tnvr - availableSlots.tnvr;
+  const alreadyBookedFosterSlots = dailyCapacity.foster - availableSlots.foster;
 
   // Calculate the total slots to display on the progress bar (already booked + user input)
   const displayedTotalBookedTnvr = alreadyBookedTnvrSlots + tnvrSlotsToBook;
@@ -701,13 +712,17 @@ export default function AppointmentModal({
                         className="h-full bg-accent-purple transition-all duration-300 ease-in-out"
                         style={{
                           width: `${
-                            (displayedTotalBookedTnvr / TNVR_CAPACITY) * 100
+                            dailyCapacity.tnvr > 0
+                              ? (displayedTotalBookedTnvr /
+                                  dailyCapacity.tnvr) *
+                                100
+                              : 0
                           }%`,
                         }}
                       ></div>
                     </div>
                     <span className="px-2 py-1 rounded-md bg-accent-purple text-primary-white font-semibold text-sm">
-                      {displayedTotalBookedTnvr}/{TNVR_CAPACITY}
+                      {displayedTotalBookedTnvr}/{dailyCapacity.tnvr}
                     </span>
                   </div>
                 </div>
@@ -752,13 +767,17 @@ export default function AppointmentModal({
                         className="h-full bg-accent-purple transition-all duration-300 ease-in-out"
                         style={{
                           width: `${
-                            (displayedTotalBookedFoster / FOSTER_CAPACITY) * 100
+                            dailyCapacity.foster > 0
+                              ? (displayedTotalBookedFoster /
+                                  dailyCapacity.foster) *
+                                100
+                              : 0
                           }%`,
                         }}
                       ></div>
                     </div>
                     <span className="px-2 py-1 rounded-md bg-accent-purple text-primary-white font-semibold text-sm">
-                      {displayedTotalBookedFoster}/{FOSTER_CAPACITY}
+                      {displayedTotalBookedFoster}/{dailyCapacity.foster}
                     </span>
                   </div>
                 </div>

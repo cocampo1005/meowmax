@@ -128,6 +128,20 @@ export default function AccountsManager() {
       // Editing an existing user
       const userRef = doc(db, "users", selectedUser.id);
       try {
+        if (userData.email !== selectedUser.email) {
+          const changeUserEmail = httpsCallable(functions, "changeUserEmail");
+          try {
+            await changeUserEmail({
+              uid: selectedUser.id,
+              newEmail: userData.email,
+            });
+            console.log("Email updated via Cloud Function.");
+          } catch (emailError) {
+            console.error("Failed to update email:", emailError);
+            alert(`Email change failed: ${emailError.message}`);
+          }
+        }
+
         if (userData.code !== selectedUser.code && userData.code) {
           const changeUserPassword = httpsCallable(
             functions,
@@ -136,7 +150,7 @@ export default function AccountsManager() {
 
           try {
             await changeUserPassword({
-              uid: selectedUser.uid,
+              uid: selectedUser.id,
               newCode: userData.code,
             });
             console.log("User password (code) updated via Cloud Function.");
