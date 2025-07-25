@@ -12,7 +12,7 @@ export default function ConfirmationModal({
 
   return (
     <div className="fixed inset-0 bg-slate-900/70 flex justify-center items-center z-50">
-      <div className="bg-white rounded-3xl flex flex-col gap-6 shadow-lg py-12 px-16 max-w-lg w-full">
+      <div className="bg-white mx-4 rounded-3xl flex flex-col gap-6 shadow-lg py-12 px-16 max-w-lg w-full">
         <div className="flex items-center text-errorRed">
           <div className="text-error-red">
             <Trash2 />
