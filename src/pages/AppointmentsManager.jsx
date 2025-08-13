@@ -10,7 +10,7 @@ import {
   deleteDoc,
   doc,
   writeBatch,
-  addDoc,
+  onSnapshot,
   updateDoc,
   setDoc,
   increment,
@@ -22,6 +22,7 @@ import ConfirmationModal from "../components/ConfirmationModal";
 import AppointmentModal from "../components/AppointmentModal"; // Import the new modal
 import { ChevronLeft, ChevronRight, Edit, Plus } from "lucide-react"; // Add calendar nav, Edit and Plus icons
 import { ChevronDown, ChevronUp, NotesIcon } from "../svgs/Icons";
+import { DateTime } from "luxon";
 
 // Helper to find the next available date
 const findNextAvailableDate = (startDate) => {
@@ -173,7 +174,11 @@ export default function AppointmentsManager() {
     const dayOfWeek = date.getDay(); // 0 for Sunday, 1 for Monday, ..., 6 for Saturday
 
     // Prevent selecting Thursday (4), Friday (5), Saturday (6) as clinic is closed
-    if (dayOfWeek === 4 || dayOfWeek === 5 || dayOfWeek === 6) {
+    const isClinicClosed =
+      dayOfWeek === 4 || dayOfWeek === 5 || dayOfWeek === 6;
+
+    // Only restrict non-admins from selecting closed days
+    if (isClinicClosed && currentUser?.role !== "admin") {
       console.log("Cannot select a day when the clinic is closed.");
       return;
     }
@@ -184,94 +189,105 @@ export default function AppointmentsManager() {
     setEditingNoteId(null);
   };
 
-  // --- Fetching Appointments for Selected Day ---
-  // Fetches all appointments for the currently selected date from Firestore
-  const fetchAppointmentsForSelectedDay = useCallback(async () => {
+  // This useEffect hook replaces your old fetch functions
+  // It sets up real-time listeners for both appointments and capacity
+  useEffect(() => {
     if (!selectedDate) {
-      setAppointments([]); // Clear appointments if no date is selected
+      setAppointments([]);
+      setCapacity({ tnvr: 0, foster: 0 });
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    try {
-      // Define start and end timestamps for the selected day
-      const startOfDay = new Date(
-        selectedDate.getFullYear(),
-        selectedDate.getMonth(),
-        selectedDate.getDate(),
-        0,
-        0,
-        0
-      );
-      const endOfDay = new Date(
-        selectedDate.getFullYear(),
-        selectedDate.getMonth(),
-        selectedDate.getDate(),
-        23,
-        59,
-        59
-      );
 
-      const appointmentsCollectionRef = collection(db, "appointments");
-      // Query for appointments within the selected day, ordered by appointment time
-      const q = query(
-        appointmentsCollectionRef,
-        where("appointmentTime", ">=", Timestamp.fromDate(startOfDay)),
-        where("appointmentTime", "<=", Timestamp.fromDate(endOfDay)),
-        orderBy("appointmentTime", "asc") // Order by time for consistent display
-      );
+    const timeZone = "America/New_York";
 
-      const querySnapshot = await getDocs(q);
-      let fetchedAppointments = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+    const startOfDay = DateTime.fromJSDate(selectedDate, { zone: timeZone })
+      .startOf("day")
+      .toJSDate();
 
-      // Custom sort to ensure TNVR appointments appear before Foster, then by trapper number
-      fetchedAppointments.sort((a, b) => {
-        if (a.serviceType === "TNVR" && b.serviceType !== "TNVR") return -1;
-        if (a.serviceType !== "TNVR" && b.serviceType === "TNVR") return 1;
-        // Then by trapperNumber for consistent grouping within service types
-        return a.trapperNumber.localeCompare(b.trapperNumber);
-      });
+    const endOfDay = DateTime.fromJSDate(selectedDate, { zone: timeZone })
+      .endOf("day")
+      .toJSDate();
 
-      setAppointments(fetchedAppointments); // Update state with fetched appointments
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching appointments for selected day:", error);
-      setLoading(false);
-      // TODO: Implement a user-friendly error message display
-    }
-  }, [selectedDate]);
+    const appointmentsCollectionRef = collection(db, "appointments");
+    const q = query(
+      appointmentsCollectionRef,
+      where("appointmentTime", ">=", Timestamp.fromDate(startOfDay)),
+      where("appointmentTime", "<=", Timestamp.fromDate(endOfDay)),
+      orderBy("appointmentTime", "asc")
+    );
 
-  // Fetches the capacity for TNVR and Foster appointments for the selected date
-  const fetchCapacityForDate = async (date) => {
-    try {
-      const docId = date.toISOString().split("T")[0];
-      const snapshot = await getDoc(doc(db, "appointmentCapacities", docId));
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        setCapacity({
-          tnvr: data.tnvrCapacity || 0,
-          foster: data.fosterCapacity || 0,
+    const capacityDocRef = doc(
+      db,
+      "appointmentCapacities",
+      selectedDate.toISOString().split("T")[0]
+    );
+
+    // --- Real-time listener for appointments ---
+    const unsubscribeAppointments = onSnapshot(
+      q,
+      (querySnapshot) => {
+        let fetchedAppointments = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        // 🔍 LOG: Full data with readable date
+        console.log(
+          "🐾 Appointments fetched:",
+          fetchedAppointments.map((a) => ({
+            id: a.id,
+            serviceType: a.serviceType,
+            trapperNumber: a.trapperNumber,
+            appointmentTime: a.appointmentTime?.toDate().toISOString(), // Human-readable
+            clinicAddress: a.clinicAddress,
+          }))
+        );
+
+        // Your existing custom sort logic
+        fetchedAppointments.sort((a, b) => {
+          if (a.serviceType === "TNVR" && b.serviceType !== "TNVR") return -1;
+          if (a.serviceType !== "TNVR" && b.serviceType === "TNVR") return 1;
+          return a.trapperNumber.localeCompare(b.trapperNumber);
         });
-      } else {
-        setCapacity({ tnvr: 0, foster: 0 }); // Default when not set
-      }
-    } catch (err) {
-      console.error("Error fetching capacity:", err);
-      setCapacity({ tnvr: 0, foster: 0 });
-    }
-  };
 
-  // Effect hook to trigger fetching appointments when the selected date changes
-  useEffect(() => {
-    fetchAppointmentsForSelectedDay();
-    if (selectedDate) {
-      fetchCapacityForDate(selectedDate);
-    }
-  }, [selectedDate, fetchAppointmentsForSelectedDay]);
+        setAppointments(fetchedAppointments);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error fetching real-time appointments:", error);
+        setLoading(false);
+      }
+    );
+
+    // --- Real-time listener for capacity ---
+    const unsubscribeCapacity = onSnapshot(
+      capacityDocRef,
+      (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          const data = docSnapshot.data();
+          setCapacity({
+            tnvr: data.tnvrCapacity || 0,
+            foster: data.fosterCapacity || 0,
+          });
+        } else {
+          setCapacity({ tnvr: 0, foster: 0 }); // Default when not set
+        }
+      },
+      (error) => {
+        console.error("Error fetching real-time capacity:", error);
+      }
+    );
+
+    // Cleanup function: this unsubscribes from the listeners
+    // when the component unmounts or the selectedDate changes.
+    return () => {
+      unsubscribeAppointments();
+      unsubscribeCapacity();
+    };
+  }, [selectedDate]);
 
   // Toggles the expansion state of an individual appointment card
   const toggleExpandedAppointment = (appointmentId) => {
@@ -303,7 +319,6 @@ export default function AppointmentsManager() {
       setIsDeletingIndividual(true);
       try {
         await deleteDoc(doc(db, "appointments", appointmentToCancel.id));
-        fetchAppointmentsForSelectedDay(); // Re-fetch to update the UI
         console.log(
           "Appointment successfully canceled:",
           appointmentToCancel.id
@@ -338,8 +353,6 @@ export default function AppointmentsManager() {
           batch.delete(appointmentRef);
         });
         await batch.commit(); // Commit the batch deletion
-
-        fetchAppointmentsForSelectedDay();
         console.log(
           "All appointments for group successfully deleted:",
           groupToDelete.groupKey
@@ -373,7 +386,6 @@ export default function AppointmentsManager() {
       });
       console.log("Notes successfully updated for appointment:", appointmentId);
       setEditingNoteId(null); // Exit edit mode after saving
-      fetchAppointmentsForSelectedDay(); // Re-fetch to display updated notes
     } catch (error) {
       console.error("Error updating notes:", error);
       console.log("Failed to save notes. Please try again.");
@@ -396,8 +408,6 @@ export default function AppointmentsManager() {
   const handleCloseAppointmentModal = () => {
     setShowAppointmentModal(false);
     setInitialDateForCreate(null);
-    // After closing modal, re-fetch appointments to ensure fresh data is displayed
-    fetchAppointmentsForSelectedDay();
   };
 
   // Handles saving an appointment (either creating new or updating existing)
@@ -459,7 +469,6 @@ export default function AppointmentsManager() {
       setShowCapacityModal(false);
       setEditingServiceType(null);
       setNewCapacityValue("");
-      fetchCapacityForDate(selectedDate); // Refresh UI
     } catch (err) {
       console.error("Error saving capacity:", err);
     } finally {
@@ -516,7 +525,7 @@ export default function AppointmentsManager() {
   return (
     <>
       <header className="w-full flex flex-col md:flex-row justify-between border-b-2 border-tertiary-purple p-8">
-        <h1 className="font-bold text-2xl text-primary-dark-purple flex items-center gap-2">
+        <h1 className="font-bold text-2xl pb-4 text-primary-dark-purple flex items-center gap-2 md:pb-0">
           Manage Appointments
         </h1>
         <button
@@ -527,7 +536,7 @@ export default function AppointmentsManager() {
         </button>
       </header>
 
-      <div className="px-4 pt-4 mb-20 md:mb-0 md:p-8">
+      <div className="p-8 mb-16 md:mb-0 md:p-8">
         {/* Calendar Header */}
         <div className="flex justify-between items-center mb-4">
           <button
@@ -662,7 +671,7 @@ export default function AppointmentsManager() {
                         setNewCapacityValue(capacity.tnvr);
                         setShowCapacityModal(true);
                       }}
-                      className="flex items-center justify-center ml-2 h-7 w-8  rounded-md bg-secondary-purple text-primary-white hover:bg-accent-purple transition-colors duration-200 hover:cursor-pointer"
+                      className="flex items-center justify-center ml-2 h-7 min-w-8  rounded-md bg-secondary-purple text-primary-white hover:bg-accent-purple transition-colors duration-200 hover:cursor-pointer"
                     >
                       <Edit size={16} />
                     </button>
@@ -855,7 +864,7 @@ export default function AppointmentsManager() {
                         setNewCapacityValue(capacity.foster);
                         setShowCapacityModal(true);
                       }}
-                      className="flex items-center justify-center ml-2 h-7 w-8  rounded-md bg-secondary-purple text-primary-white hover:bg-accent-purple transition-colors duration-200 hover:cursor-pointer"
+                      className="flex items-center justify-center ml-2 h-7 min-w-8  rounded-md bg-secondary-purple text-primary-white hover:bg-accent-purple transition-colors duration-200 hover:cursor-pointer"
                     >
                       <Edit size={16} />
                     </button>

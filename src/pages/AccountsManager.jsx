@@ -262,7 +262,7 @@ export default function AccountsManager() {
   return (
     <>
       <header className="w-full flex flex-col md:flex-row justify-between border-b-2 border-tertiary-purple p-8">
-        <h1 className="font-bold text-2xl text-primary-dark-purple">
+        <h1 className="font-bold text-2xl pb-4 md:pb-0 text-primary-dark-purple">
           Manage Accounts
         </h1>
         <button onClick={handleAdd} className="button">
@@ -450,8 +450,9 @@ export default function AccountsManager() {
         )}
 
         {/* Filter Inputs */}
-        <div className="flex gap-4">
-          <div className="relative flex-grow">
+        <div className="space-y-3 md:space-y-0 md:flex md:gap-4">
+          {/* Search Input */}
+          <div className="relative md:flex-grow">
             <input
               type="text"
               placeholder="Search by Name or Number"
@@ -464,25 +465,31 @@ export default function AccountsManager() {
               size={20}
             />
           </div>
+
+          {/* Equipment Filter */}
           <input
             type="number"
             placeholder="Min Equipment Capacity"
             value={equipmentFilter}
             onChange={(e) => setEquipmentFilter(e.target.value)}
-            className="p-2 border  outline-accent-purple rounded-lg"
+            className="p-2 border outline-accent-purple rounded-lg w-full md:w-auto md:min-w-[180px]"
           />
+
+          {/* Region Filter */}
           <select
             value={regionFilter}
             onChange={(e) => setRegionFilter(e.target.value)}
-            className="p-2 border  outline-accent-purple rounded-lg"
+            className="p-2 border outline-accent-purple rounded-lg w-full md:w-auto md:min-w-[140px]"
           >
             <option value="">All Regions</option>
             <option value="Broward">Broward</option>
             <option value="Miami-Dade">Miami-Dade</option>
           </select>
+
+          {/* Reset Button */}
           <button
             onClick={handleResetFilters}
-            className="ml-auto px-4 py-2 cursor-pointer bg-secondary-purple text-white rounded-lg hover:bg-accent-purple flex items-center gap-2"
+            className="px-4 py-2 cursor-pointer bg-secondary-purple text-white rounded-lg hover:bg-accent-purple flex items-center justify-center gap-2 w-full md:w-auto md:whitespace-nowrap"
           >
             <RotateCcw size={18} />
             <span>Reset Filters</span>

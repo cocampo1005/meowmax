@@ -13,6 +13,7 @@ import { db } from "../firebase"; // Assuming you have your firebase config in .
 import LoadingSpinner from "./LoadingSpinner";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { DateTime } from "luxon";
 
 // Clinic Data - copied from AppointmentsManager.jsx and BookAppointment.jsx for consistency
 const CLINIC = {
@@ -222,22 +223,15 @@ export default function AppointmentModal({
 
       setDailyCapacity({ tnvr: tnvrCap, foster: fosterCap });
 
-      const startOfDay = new Date(
-        selectedDate.getFullYear(),
-        selectedDate.getMonth(),
-        selectedDate.getDate(),
-        0,
-        0,
-        0
-      );
-      const endOfDay = new Date(
-        selectedDate.getFullYear(),
-        selectedDate.getMonth(),
-        selectedDate.getDate(),
-        23,
-        59,
-        59
-      );
+      const timeZone = "America/New_York";
+
+      const startOfDay = DateTime.fromJSDate(selectedDate, { zone: timeZone })
+        .startOf("day")
+        .toJSDate();
+
+      const endOfDay = DateTime.fromJSDate(selectedDate, { zone: timeZone })
+        .endOf("day")
+        .toJSDate();
 
       const appointmentsRef = collection(db, "appointments");
       const q = query(
@@ -510,8 +504,8 @@ export default function AppointmentModal({
 
   return (
     <div className="fixed inset-0 bg-slate-900/70 flex justify-center items-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto transform transition-all sm:my-8 sm:w-full">
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] mb-16 overflow-y-auto transform transition-all sm:my-8 sm:w-full">
+        <div className="p-8 border-b border-gray-200 flex justify-between items-center">
           <h2 className="text-xl font-semibold text-primary-dark-purple">
             {modalTitle}
           </h2>
@@ -680,23 +674,26 @@ export default function AppointmentModal({
                     type="number"
                     min="0"
                     max={
-                      availableSlots.tnvr +
-                      (isEditMode && appointment?.serviceType === "TNVR"
+                      isEditMode
                         ? 1
-                        : 0)
+                        : dailyCapacity.tnvr > 0
+                        ? availableSlots.tnvr
+                        : 100 // If no capacity set, allow up to 100
                     }
                     value={tnvrSlotsToBook}
                     onFocus={(e) => e.target.select()}
                     onChange={(e) => {
                       const value = parseInt(e.target.value) || 0;
                       if (isEditMode) {
-                        // In edit mode, if TNVR is being set to 1, Foster must be 0
                         setTnvrSlotsToBook(Math.min(1, Math.max(0, value)));
                         if (value === 1) setFosterSlotsToBook(0);
                       } else {
-                        // In create mode, normal logic
+                        // If capacity is set (> 0), respect the available slots limit
+                        // If no capacity is set, just use a reasonable upper limit
+                        const maxAllowed =
+                          dailyCapacity.tnvr > 0 ? availableSlots.tnvr : 100;
                         setTnvrSlotsToBook(
-                          Math.max(0, Math.min(availableSlots.tnvr, value))
+                          Math.max(0, Math.min(maxAllowed, value))
                         );
                       }
                     }}
@@ -716,13 +713,16 @@ export default function AppointmentModal({
                               ? (displayedTotalBookedTnvr /
                                   dailyCapacity.tnvr) *
                                 100
+                              : displayedTotalBookedTnvr > 0
+                              ? 100
                               : 0
                           }%`,
                         }}
                       ></div>
                     </div>
                     <span className="px-2 py-1 rounded-md bg-accent-purple text-primary-white font-semibold text-sm">
-                      {displayedTotalBookedTnvr}/{dailyCapacity.tnvr}
+                      {displayedTotalBookedTnvr}
+                      {dailyCapacity.tnvr > 0 ? `/${dailyCapacity.tnvr}` : ""}
                     </span>
                   </div>
                 </div>
@@ -737,23 +737,28 @@ export default function AppointmentModal({
                     type="number"
                     min="0"
                     max={
-                      availableSlots.foster +
-                      (isEditMode && appointment?.serviceType === "Foster"
+                      isEditMode
                         ? 1
-                        : 0)
+                        : dailyCapacity.foster > 0
+                        ? availableSlots.foster
+                        : 100 // If no capacity set, allow up to 100
                     }
                     value={fosterSlotsToBook}
                     onFocus={(e) => e.target.select()}
                     onChange={(e) => {
                       const value = parseInt(e.target.value) || 0;
                       if (isEditMode) {
-                        // In edit mode, if Foster is being set to 1, TNVR must be 0
                         setFosterSlotsToBook(Math.min(1, Math.max(0, value)));
                         if (value === 1) setTnvrSlotsToBook(0);
                       } else {
-                        // In create mode, normal logic
+                        // If capacity is set (> 0), respect the available slots limit
+                        // If no capacity is set, just use a reasonable upper limit
+                        const maxAllowed =
+                          dailyCapacity.foster > 0
+                            ? availableSlots.foster
+                            : 100;
                         setFosterSlotsToBook(
-                          Math.max(0, Math.min(availableSlots.foster, value))
+                          Math.max(0, Math.min(maxAllowed, value))
                         );
                       }
                     }}
@@ -771,13 +776,18 @@ export default function AppointmentModal({
                               ? (displayedTotalBookedFoster /
                                   dailyCapacity.foster) *
                                 100
+                              : displayedTotalBookedFoster > 0
+                              ? 100
                               : 0
                           }%`,
                         }}
                       ></div>
                     </div>
                     <span className="px-2 py-1 rounded-md bg-accent-purple text-primary-white font-semibold text-sm">
-                      {displayedTotalBookedFoster}/{dailyCapacity.foster}
+                      {displayedTotalBookedFoster}
+                      {dailyCapacity.foster > 0
+                        ? `/${dailyCapacity.foster}`
+                        : ""}
                     </span>
                   </div>
                 </div>

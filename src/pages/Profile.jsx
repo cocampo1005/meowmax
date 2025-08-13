@@ -100,7 +100,7 @@ export default function Profile() {
   } = currentUser;
 
   return (
-    <div className="container mx-auto min-h-[100dvh] relative p-4 mb-16 md:mb-0">
+    <div className="container mx-auto relative p-8 mb-16 md:mb-0">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
         <h1 className="text-2xl font-bold text-center md:text-left text-accent-purple">

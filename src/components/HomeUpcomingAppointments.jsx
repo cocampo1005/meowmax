@@ -7,13 +7,13 @@ import {
   orderBy,
   getDocs,
   Timestamp,
-  limit, // Import limit
+  limit,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
-import LoadingSpinner from "./LoadingSpinner"; // Adjust path as needed
+import LoadingSpinner from "./LoadingSpinner";
 import { Link } from "react-router-dom";
-import { LocationIcon, ServiceIcon } from "../svgs/Icons"; // Assuming you have these icons
+import { DateTime } from "luxon";
 
 // Define clinic data (Ensure this is the same as used elsewhere)
 const CLINICS = [
@@ -34,8 +34,11 @@ export default function HomeUpcomingAppointments() {
     setLoading(true);
     try {
       const appointmentsCollectionRef = collection(db, "appointments");
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
+      const clinicZone = "America/New_York";
+      const todayStart = DateTime.now()
+        .setZone(clinicZone)
+        .startOf("day")
+        .toJSDate();
 
       // Fetch more appointments than needed to ensure we get at least 3 unique dates
       const q = query(
@@ -43,7 +46,7 @@ export default function HomeUpcomingAppointments() {
         where("userId", "==", userId),
         where("appointmentTime", ">=", Timestamp.fromDate(todayStart)),
         orderBy("appointmentTime", "asc"),
-        limit(20) // Fetch up to 20 appointments to find the next few dates
+        limit(100) // Fetch up to 100 appointments to find the next few dates
       );
 
       const querySnapshot = await getDocs(q);
@@ -71,77 +74,67 @@ export default function HomeUpcomingAppointments() {
   const groupAndLimitAppointments = (appointmentsList, limitDates) => {
     const groupedMap = new Map();
 
+    // Group appointments by date and clinic
     appointmentsList.forEach((appointment) => {
       if (
         !appointment.appointmentTime ||
         !appointment.appointmentTime.toDate ||
         !appointment.clinicAddress
       ) {
-        console.warn(
-          "Skipping appointment with missing date or clinic:",
-          appointment
-        );
+        console.warn("Skipping invalid appointment:", appointment);
         return;
       }
 
       const appointmentDate = appointment.appointmentTime.toDate();
-      // Use the date part for grouping, ignore time
+
       const dateKey = `${appointmentDate.getFullYear()}-${appointmentDate.getMonth()}-${appointmentDate.getDate()}`;
       const clinicAddress = appointment.clinicAddress;
-
-      // Create a unique key for the group (Date + Clinic Address)
       const groupKey = `${dateKey}-${clinicAddress}`;
 
-      if (groupedMap.has(groupKey)) {
-        const existingGroup = groupedMap.get(groupKey);
-        existingGroup.appointments.push(appointment);
-        if (appointment.serviceType === "TNVR") {
-          existingGroup.tnvrCount++;
-        } else if (appointment.serviceType === "Foster") {
-          existingGroup.fosterCount++;
-        }
-      } else {
-        const newGroup = {
-          groupKey: groupKey, // Store the key for potential future use (though not needed for display here)
+      if (!groupedMap.has(groupKey)) {
+        groupedMap.set(groupKey, {
+          groupKey,
           displayDate: appointmentDate,
-          clinicAddress: clinicAddress,
+          clinicAddress,
           clinicName:
             CLINICS.find((c) => c.address === clinicAddress)?.name ||
             "Unknown Clinic",
-          tnvrCount: appointment.serviceType === "TNVR" ? 1 : 0,
-          fosterCount: appointment.serviceType === "Foster" ? 1 : 0,
-          appointments: [appointment], // Store individual appointments if needed later (not displayed in home cards)
-        };
-        groupedMap.set(groupKey, newGroup);
+          tnvrCount: 0,
+          fosterCount: 0,
+          appointments: [],
+        });
+      }
+
+      const group = groupedMap.get(groupKey);
+      group.appointments.push(appointment);
+
+      if (appointment.serviceType === "TNVR") {
+        group.tnvrCount++;
+      } else if (appointment.serviceType === "Foster") {
+        group.fosterCount++;
       }
     });
 
-    // Convert map values to array and sort by date
+    // Convert to array and sort by date
     const groupedArray = Array.from(groupedMap.values());
     groupedArray.sort(
       (a, b) => a.displayDate.getTime() - b.displayDate.getTime()
     );
 
-    // Limit to the first `limitDates` distinct dates
+    // Keep only the first N distinct dates
+    const seenDates = new Set();
     const limitedGroups = [];
-    const distinctDates = new Set();
 
     for (const group of groupedArray) {
       const dateKey = `${group.displayDate.getFullYear()}-${group.displayDate.getMonth()}-${group.displayDate.getDate()}`;
-      if (distinctDates.size < limitDates || distinctDates.has(dateKey)) {
-        limitedGroups.push(group);
-        distinctDates.add(dateKey);
-      } else {
-        // If we've already collected 3 distinct dates and this group is for a new date, stop
-        break;
-      }
-    }
 
-    // If needed, you can sort the limited groups by date again,
-    // but the initial sort should handle this.
-    limitedGroups.sort(
-      (a, b) => a.displayDate.getTime() - b.displayDate.getTime()
-    );
+      if (!seenDates.has(dateKey)) {
+        if (seenDates.size >= limitDates) break;
+        seenDates.add(dateKey);
+      }
+
+      limitedGroups.push(group); // Includes all groups from the allowed dates
+    }
 
     return limitedGroups;
   };
