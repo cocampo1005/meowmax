@@ -1,10 +1,9 @@
-// src/contexts/AuthContext.js
-import React, { useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { auth, db } from "../firebase";
-import { doc, getDoc } from "firebase/firestore";
-import LoadingSpinner from "../components/LoadingSpinner";
+import { doc, onSnapshot } from "firebase/firestore";
+import i18n from "../i18n";
 
-const AuthContext = React.createContext();
+const AuthContext = createContext();
 
 export function useAuth() {
   return useContext(AuthContext);
@@ -14,52 +13,53 @@ export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Set up the Firebase auth state observer
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      // Make the callback async
-      if (user) {
-        // User is signed in, fetch their profile data
-        try {
-          const userDocRef = doc(db, "users", user.uid); // Assuming your user data is in a "users" collection
-          const userDocSnap = await getDoc(userDocRef);
+    let unsubscribeUserDoc = null;
 
-          if (userDocSnap.exists()) {
-            // Combine auth user data with profile data
-            setCurrentUser({ ...user, ...userDocSnap.data() });
-          } else {
-            // User document doesn't exist, just use auth data
-            console.warn(`User document not found for UID: ${user.uid}`);
-            setCurrentUser(user);
-          }
-        } catch (error) {
-          console.error("Error fetching user document:", error);
-          // Fallback to just using auth data on error
-          setCurrentUser(user);
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        // User is signed out
+    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+      // Clean up a previous user-doc listener if we switch accounts/log out
+      if (unsubscribeUserDoc) {
+        unsubscribeUserDoc();
+        unsubscribeUserDoc = null;
+      }
+
+      if (!user) {
         setCurrentUser(null);
         setLoading(false);
+        return;
       }
+
+      const ref = doc(db, "users", user.uid);
+
+      unsubscribeUserDoc = onSnapshot(
+        ref,
+        (snap) => {
+          const data = snap.data() || {};
+          // Merge the auth user basics with the Firestore profile
+          const merged = { uid: user.uid, email: user.email, ...data };
+          setCurrentUser(merged);
+          setLoading(false);
+
+          // Keep i18n in sync with the profile
+          if (merged.language && i18n.language !== merged.language) {
+            i18n.changeLanguage(merged.language);
+            localStorage.setItem("lang", merged.language);
+          }
+        },
+        (err) => {
+          console.error("AuthContext user snapshot error:", err);
+          setLoading(false);
+        }
+      );
     });
 
-    // Cleanup the listener on component unmount
-    return unsubscribe;
+    return () => {
+      if (unsubscribeUserDoc) unsubscribeUserDoc();
+      unsubscribeAuth();
+    };
   }, []);
 
-  const value = {
-    currentUser,
-    loading,
-    auth,
-  };
+  const value = { currentUser, loading };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
-      {loading && <LoadingSpinner />}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

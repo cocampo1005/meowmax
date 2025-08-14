@@ -1,5 +1,4 @@
-// src/components/HomeUpcomingAppointments.jsx
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   collection,
   query,
@@ -14,18 +13,19 @@ import { useAuth } from "../contexts/AuthContext";
 import LoadingSpinner from "./LoadingSpinner";
 import { Link } from "react-router-dom";
 import { DateTime } from "luxon";
+import { useTranslation } from "react-i18next";
 
 // Define clinic data (Ensure this is the same as used elsewhere)
 const CLINICS = [
   { id: "clinicA", name: "Downtown Clinic", address: "123 Main St" },
   { id: "clinicB", name: "Uptown Clinic", address: "456 Oak Ave" },
-  // Add more clinics as needed
 ];
 
 export default function HomeUpcomingAppointments() {
   const { currentUser } = useAuth();
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { t, i18n } = useTranslation("common");
 
   // Function to fetch upcoming appointments
   const fetchUpcomingAppointments = async (userId) => {
@@ -46,7 +46,7 @@ export default function HomeUpcomingAppointments() {
         where("userId", "==", userId),
         where("appointmentTime", ">=", Timestamp.fromDate(todayStart)),
         orderBy("appointmentTime", "asc"),
-        limit(100) // Fetch up to 100 appointments to find the next few dates
+        limit(100)
       );
 
       const querySnapshot = await getDocs(q);
@@ -66,7 +66,6 @@ export default function HomeUpcomingAppointments() {
     } catch (error) {
       console.error("Error fetching upcoming appointments for home:", error);
       setLoading(false);
-      // Optionally set an error state to display
     }
   };
 
@@ -143,46 +142,46 @@ export default function HomeUpcomingAppointments() {
     fetchUpcomingAppointments(currentUser?.uid);
   }, [currentUser]); // Re-fetch if currentUser changes
 
+  // Locale for weekday labels based on current i18n language
+  const weekdayLocale = i18n.language === "es" ? "es-ES" : "en-US";
+
   return (
     <div className="mt-8 flex-grow">
-      {" "}
-      {/* Add some top margin to space it from content above */}
+      {/* Header */}
       <div className="flex justify-between items-center mb-4 md:mb-6">
         <div className="flex items-center justify-between w-full md:w-auto">
-          {" "}
-          {/* New wrapper for heading and "View All" */}
           <h2 className="text-xl font-semibold text-primary-dark-purple">
-            Upcoming appointments
+            {t("home.upcomingTitle")}
           </h2>
           <Link
             to="/appointments"
             className="ml-4 text-secondary-purple hover:underline active:text-primary-dark-purple text-sm font-semibold md:ml-6"
+            aria-label={t("home.viewAll")}
           >
-            View All &gt;
+            {t("home.viewAll")} &gt;
           </Link>
         </div>
-        {/* Mobile-only Book Appointment button */}
+
+        {/* Desktop-only Book Appointment button */}
         <div className="hidden md:flex">
-          <Link
-            to="/book-appointment"
-            className="button text-sm px-4 py-2" // Added md:hidden
-          >
-            Book Appointment
+          <Link to="/book-appointment" className="button text-sm px-4 py-2">
+            {t("book.title")}
           </Link>
         </div>
       </div>
+
       {loading ? (
         <LoadingSpinner />
       ) : upcomingAppointments.length > 0 ? (
         <div className="space-y-3 md:w-[33%]">
-          {" "}
-          {/* Add horizontal padding */}
           {upcomingAppointments.map((group) => {
             const displayDate = group.displayDate;
-            const isDateValid = !isNaN(displayDate.getTime()); // Validate date
+            const isDateValid = !isNaN(displayDate.getTime());
 
             const shortDay = isDateValid
-              ? displayDate.toLocaleDateString("en-US", { weekday: "short" })
+              ? displayDate.toLocaleDateString(weekdayLocale, {
+                  weekday: "short",
+                })
               : "---";
             const dayOfMonth = isDateValid ? displayDate.getDate() : "--";
 
@@ -201,29 +200,21 @@ export default function HomeUpcomingAppointments() {
 
                 {/* Right Appointment Summary Section */}
                 <div className="flex-grow p-3 text-gray-700 flex flex-col justify-center">
-                  {/* <div className="flex gap-2 items-center text-sm mb-1">
-                    <LocationIcon />
-                    <span>
-                      {group.clinicName} - {group.clinicAddress}
-                    </span>
-                  </div> */}
                   <div className="flex gap-2 items-center justify-center text-lg">
-                    {/* <ServiceIcon /> */}
                     {group.tnvrCount > 0 && (
                       <>
-                        TNVR{" "}
+                        {t("book.tnvr")}{" "}
                         <span className="ml-1 font-bold text-secondary-purple">
                           {group.tnvrCount}
                         </span>
                         {group.fosterCount > 0 && (
                           <span className="mx-2">|</span>
-                        )}{" "}
-                        {/* Separator if both exist */}
+                        )}
                       </>
                     )}
                     {group.fosterCount > 0 && (
                       <>
-                        Foster{" "}
+                        {t("book.foster")}{" "}
                         <span className="ml-1 font-bold text-secondary-purple">
                           {group.fosterCount}
                         </span>
@@ -231,8 +222,7 @@ export default function HomeUpcomingAppointments() {
                     )}
                     {group.tnvrCount === 0 &&
                       group.fosterCount === 0 &&
-                      "No slots booked"}{" "}
-                    {/* Handle case with no slots */}
+                      t("home.noSlotsBooked")}
                   </div>
                 </div>
               </div>
@@ -241,9 +231,7 @@ export default function HomeUpcomingAppointments() {
         </div>
       ) : (
         <div className="text-center text-gray-600 mt-4 px-4">
-          {" "}
-          {/* Add horizontal padding */}
-          No upcoming appointments.
+          {t("home.noUpcoming")}
         </div>
       )}
     </div>

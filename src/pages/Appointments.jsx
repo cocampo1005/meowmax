@@ -23,6 +23,7 @@ import {
 } from "../svgs/Icons";
 import ConfirmationModal from "../components/ConfirmationModal";
 import { DateTime } from "luxon";
+import { useTranslation, Trans } from "react-i18next";
 
 // Clinic Data
 const CLINIC = {
@@ -51,6 +52,13 @@ export default function Appointments() {
   const [historyCursor, setHistoryCursor] = useState(null);
   const [hasMoreHistory, setHasMoreHistory] = useState(true);
   const [dateRange, setDateRange] = useState({ start: null, end: null });
+
+  const { i18n, t } = useTranslation("common");
+  const dtLocale = i18n.language?.startsWith("es") ? "es" : "en";
+
+  // tiny helper to normalize Date | DateTime -> DateTime
+  const asDateTime = (d) =>
+    DateTime.isDateTime(d) ? d : DateTime.fromJSDate(d);
 
   // Function to fetch upcoming appointments (no pagination needed)
   const fetchUpcomingAppointments = async (userId) => {
@@ -316,10 +324,6 @@ export default function Appointments() {
             (appointment) => appointment.id !== appointmentToCancel.id
           )
         );
-        console.log(
-          "Appointment successfully canceled:",
-          appointmentToCancel.id
-        );
       } catch (error) {
         console.error("Error canceling appointment:", error);
         // TODO: Display an error message to the user
@@ -333,7 +337,6 @@ export default function Appointments() {
 
   // Function to handle deleting all appointments for a date
   const handleDeleteAllAppointments = (group) => {
-    console.log("Preparing to delete all appointments for group:", group);
     setGroupToDelete(group);
     setShowDeleteAllModal(true);
   };
@@ -358,11 +361,6 @@ export default function Appointments() {
               )
           )
         );
-        console.log(
-          "All appointments for date and clinic successfully deleted:",
-          groupToDelete.dateKey,
-          groupToDelete.clinicAddress
-        );
       } catch (error) {
         console.error("Error deleting all appointments:", error);
         // TODO: Display an error message to the user
@@ -383,15 +381,35 @@ export default function Appointments() {
     setGroupToDelete(null);
   };
 
+  const serviceLabel =
+    appointmentToCancel?.serviceType === "TNVR"
+      ? t("book.tnvr")
+      : t("book.foster");
+
+  const formattedCancelDate = appointmentToCancel?.appointmentTime
+    ? DateTime.fromJSDate(appointmentToCancel.appointmentTime.toDate())
+        .setLocale(dtLocale)
+        .toLocaleString({ month: "long", day: "numeric", year: "numeric" })
+    : "";
+
+  const formattedDeleteAllDate = groupToDelete?.displayDate
+    ? asDateTime(groupToDelete.displayDate).setLocale(dtLocale).toLocaleString({
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "";
+
   return (
     <>
       <header className="w-full hidden md:flex justify-between border-b-2 border-tertiary-purple p-8">
         <h1 className="font-bold text-2xl text-primary-dark-purple">
-          Appointments
+          {t("appointments.title")}
         </h1>
         {/* Book Appointment Button for Desktop */}
         <Link to="/book-appointment" className="button">
-          Book Appointment
+          {t("appointments.bookAppointment")}
         </Link>
       </header>
 
@@ -412,7 +430,7 @@ export default function Appointments() {
                         }`}
               onClick={() => setView("upcoming")}
             >
-              Upcoming
+              {t("appointments.upcoming")}
             </button>
             <button
               className={`px-6 py-3 text-lg font-semibold transition-colors duration-200 
@@ -423,16 +441,28 @@ export default function Appointments() {
                         }`}
               onClick={() => setView("history")}
             >
-              History
+              {t("appointments.history")}
             </button>
           </div>
 
           {/* Date Range Indicator for History */}
           {view === "history" && dateRange.start && dateRange.end && (
             <div className="text-sm text-gray-600">
-              Showing appointments from{" "}
-              {dateRange.start.toFormat("MMM d, yyyy")} to{" "}
-              {dateRange.end.toFormat("MMM d, yyyy")}
+              <Trans
+                i18nKey="appointments.showingFromTo"
+                values={{
+                  start: dateRange.start.setLocale(dtLocale).toLocaleString({
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  }),
+                  end: dateRange.end.setLocale(dtLocale).toLocaleString({
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  }),
+                }}
+              />
             </div>
           )}
         </div>
@@ -440,7 +470,7 @@ export default function Appointments() {
         {/* Tabs for Upcoming/History for Mobile */}
         <div className="fixed bg-primary-light-purple top-16 right-0 left-0 flex flex-col w-full p-4 flex-shrink-0 md:hidden shadow-md z-40">
           <h1 className="font-bold text-2xl text-primary-dark-purple text-center mb-2">
-            Appointments
+            {t("appointments.title")}
           </h1>
 
           <div className="flex">
@@ -453,7 +483,7 @@ export default function Appointments() {
         }`}
               onClick={() => setView("upcoming")}
             >
-              Upcoming
+              {t("appointments.upcoming")}
             </button>
             <button
               className={`flex-1 text-center px-6 py-3 text-lg font-semibold transition-colors duration-200 rounded-tr-lg rounded-br-lg
@@ -464,15 +494,15 @@ export default function Appointments() {
         }`}
               onClick={() => setView("history")}
             >
-              History
+              {t("appointments.history")}
             </button>
           </div>
 
           {/* Date Range Indicator for History - Mobile */}
           {view === "history" && dateRange.start && dateRange.end && (
             <div className="text-xs text-gray-600 text-center mt-2">
-              {dateRange.start.toFormat("MMM d, yyyy")} -{" "}
-              {dateRange.end.toFormat("MMM d, yyyy")}
+              {dateRange.start.setLocale(dtLocale).toFormat("MMM d, yyyy")} -{" "}
+              {dateRange.end.setLocale(dtLocale).toFormat("MMM d, yyyy")}
             </div>
           )}
         </div>
@@ -491,15 +521,17 @@ export default function Appointments() {
                   const isDateValid = displayDate?.isValid;
 
                   const formattedDateHeader = isDateValid
-                    ? displayDate.toLocaleString({
+                    ? displayDate.setLocale(dtLocale).toLocaleString({
                         month: "long",
                         day: "numeric",
                         year: "numeric",
                       })
-                    : "Invalid Date";
+                    : t("errors.invalidDate");
 
                   const dayOfWeek = isDateValid
-                    ? displayDate.toLocaleString({ weekday: "long" })
+                    ? displayDate
+                        .setLocale(dtLocale)
+                        .toLocaleString({ weekday: "long" })
                     : "";
 
                   return (
@@ -531,6 +563,32 @@ export default function Appointments() {
                               {group.appointments.map((appointment) => {
                                 const isAppointmentExpanded =
                                   expandedAppointmentId === appointment.id;
+
+                                const serviceLabel =
+                                  appointment.serviceType === "TNVR"
+                                    ? t("book.tnvr")
+                                    : t("book.foster");
+
+                                const statusRaw = appointment.status || "";
+                                const statusNorm = statusRaw.toLowerCase(); // "completed" | "canceled" | etc.
+
+                                const isCompleted = statusNorm === "completed";
+                                const isCanceled = statusNorm === "canceled";
+
+                                const statusLabel = isCompleted
+                                  ? t("common.status.completed")
+                                  : isCanceled
+                                  ? t("common.status.canceled")
+                                  : t("common.status.upcoming");
+
+                                const statusClasses = `px-3 py-1 text-xs font-semibold rounded-full ${
+                                  isCompleted
+                                    ? "bg-tertiary-purple text-primary-dark-purple"
+                                    : isCanceled
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-gray-100 text-gray-600"
+                                }`;
+
                                 return (
                                   <li
                                     key={appointment.id}
@@ -548,21 +606,13 @@ export default function Appointments() {
                                         <div className="flex items-center">
                                           <AppointmentListItemIcon />
                                           <span className="mr-2">
-                                            {appointment.serviceType}
+                                            {serviceLabel}
                                           </span>
                                         </div>
+
                                         {appointment.status && (
-                                          <span
-                                            className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                                              appointment.status === "Completed"
-                                                ? "bg-tertiary-purple text-primary-dark-purple"
-                                                : appointment.status ===
-                                                  "Canceled"
-                                                ? "bg-red-100 text-red-800"
-                                                : "bg-gray-100 text-gray-600"
-                                            }`}
-                                          >
-                                            {appointment.status}
+                                          <span className={statusClasses}>
+                                            {statusLabel}
                                           </span>
                                         )}
                                       </div>
@@ -572,7 +622,7 @@ export default function Appointments() {
                                         <div className="flex items-center text-gray-700 mb-2">
                                           <NotesIcon />
                                           <span className="ml-2 font-semibold">
-                                            Notes:
+                                            {t("appointments.notes")}:
                                           </span>
                                         </div>
                                         <p className="text-gray-600 ml-6 break-words">
@@ -591,7 +641,7 @@ export default function Appointments() {
                                                   );
                                                 }}
                                               >
-                                                Release Appointment
+                                                {t("appointments.release")}
                                               </button>
                                             </div>
                                           )}
@@ -608,7 +658,7 @@ export default function Appointments() {
                                   handleDeleteAllAppointments(group)
                                 }
                               >
-                                Release All Appointments for this Date
+                                {t("appointments.releaseAll")}
                               </button>
                             )}
                           </>
@@ -635,7 +685,7 @@ export default function Appointments() {
                             )}
                             {group.tnvrCount === 0 &&
                               group.fosterCount === 0 &&
-                              "No slots booked"}
+                              t("appointments.noSlotsBooked")}
                           </div>
                         )}
                       </div>
@@ -655,7 +705,7 @@ export default function Appointments() {
                     {loadingMore ? (
                       <div className="flex items-center justify-center">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Loading...
+                        {t("common.loading")}...
                       </div>
                     ) : (
                       "Load Earlier Appointments"
@@ -669,13 +719,15 @@ export default function Appointments() {
                 !hasMoreHistory &&
                 appointments.length > 0 && (
                   <div className="mt-8 text-center text-gray-500">
-                    <p>No earlier appointments found</p>
+                    <p>{t("appointments.noEarlierFound")}</p>
                   </div>
                 )}
             </>
           ) : (
             <div className="text-center text-gray-600 mt-8">
-              No {view} appointments found.
+              {view === "upcoming"
+                ? t("appointments.noneUpcoming")
+                : t("appointments.noneHistory")}
             </div>
           )}
         </div>
@@ -683,30 +735,20 @@ export default function Appointments() {
         {/* Book Appointment Button for Mobile */}
         <div className="md:hidden fixed bottom-16 left-0 right-0 p-4 bg-primary-light-purple z-40">
           <Link to="/book-appointment" className="button">
-            Book Appointment
+            {t("appointments.bookAppointment")}
           </Link>
         </div>
 
         {/* Individual Cancel Confirmation Modal */}
         <ConfirmationModal
           isOpen={showCancelModal}
-          title="Confirm Release"
+          title={t("confirmations.confirmRelease")}
           message={
-            <>
-              Are you sure you want to cancel this{" "}
-              <strong>{appointmentToCancel?.serviceType}</strong> appointment
-              for{" "}
-              <strong>
-                {appointmentToCancel?.appointmentTime
-                  ?.toDate()
-                  .toLocaleDateString("en-US", {
-                    month: "long",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-              </strong>
-              ?
-            </>
+            <Trans
+              i18nKey="confirmations.releaseAppointmentMessage"
+              values={{ serviceType: serviceLabel, date: formattedCancelDate }}
+              components={{ strong: <strong /> }}
+            />
           }
           onConfirm={confirmCancelAppointment}
           onClose={handleCloseModal}
@@ -715,21 +757,13 @@ export default function Appointments() {
         {/* Delete All Confirmation Modal */}
         <ConfirmationModal
           isOpen={showDeleteAllModal}
-          title="Confirm Release All"
+          title={t("confirmations.confirmReleaseAll")}
           message={
-            <>
-              Are you sure you want to delete <strong>all appointments</strong>{" "}
-              for{" "}
-              <strong>
-                {groupToDelete?.displayDate.toLocaleString({
-                  weekday: "long",
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </strong>{" "}
-              at Street Cat Clinic? This action cannot be undone.
-            </>
+            <Trans
+              i18nKey="confirmations.releaseAllMessage"
+              values={{ date: formattedDeleteAllDate }}
+              components={{ strong: <strong /> }}
+            />
           }
           onConfirm={confirmDeleteAllAppointments}
           onClose={handleCloseModal}

@@ -5,12 +5,16 @@ import { auth, db } from "../firebase";
 import { doc, updateDoc } from "firebase/firestore";
 import { formatPhoneNumber } from "../utils/phoneNumberReformatter";
 import { LogoutIcon } from "../svgs/Icons";
-import { SquarePen } from "lucide-react";
+import { Globe, SquarePen } from "lucide-react";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { useTranslation } from "react-i18next";
+import usFlag from "../assets/flags/us-flag.svg";
+import esFlag from "../assets/flags/es-flag.svg";
 
 export default function Profile() {
   const { currentUser, loading } = useAuth();
   const navigate = useNavigate();
+  const { i18n, t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -28,9 +32,12 @@ export default function Profile() {
           longTerm: false,
           senior: false,
         },
+        language:
+          currentUser.language ||
+          (i18n.language?.startsWith("es") ? "es" : "en"),
       });
     }
-  }, [currentUser]);
+  }, [currentUser, i18n.language]);
 
   const handleLogout = async () => {
     try {
@@ -60,6 +67,11 @@ export default function Profile() {
     });
   };
 
+  const handleLanguageChange = (e) => {
+    const selectedLanguage = e.target.value;
+    setFormData((prev) => ({ ...prev, language: selectedLanguage }));
+  };
+
   const handleSave = async () => {
     if (!currentUser) return;
     setSaving(true);
@@ -73,7 +85,12 @@ export default function Profile() {
           parseInt(formData.recoverySpaceLimit, 10)
         ),
         fosterCapability: formData.fosterCapability,
+        language: formData.language,
       });
+
+      // Update i18n language and localStorage when saving
+      await i18n.changeLanguage(formData.language);
+
       setEditing(false);
     } catch (error) {
       console.error("Failed to update user:", error);
@@ -97,6 +114,7 @@ export default function Profile() {
     address,
     trapperNumber,
     performanceMetrics,
+    language,
   } = currentUser;
 
   return (
@@ -112,7 +130,7 @@ export default function Profile() {
         <div className=" hidden md:flex">
           <button onClick={handleLogout} className="red-button gap-2">
             <LogoutIcon />
-            Logout
+            {t("profile.logout")}
           </button>
         </div>
       </div>
@@ -124,20 +142,21 @@ export default function Profile() {
           {/* Basic Info */}
           <section>
             <h2 className="text-xl font-semibold text-primary-dark-purple mb-3">
-              Your Information
+              {t("profile.yourInformation")}
             </h2>
             <div className="space-y-2">
               <p>
-                <strong>Email:</strong> {email || "N/A"}
+                <strong>{t("profile.email")}:</strong> {email || "N/A"}
               </p>
               <p>
-                <strong>Phone:</strong> {formatPhoneNumber(phone) || "N/A"}
+                <strong>{t("profile.phone")}:</strong>{" "}
+                {formatPhoneNumber(phone) || "N/A"}
               </p>
               <p>
-                <strong>Address:</strong> {address || "N/A"}
+                <strong>{t("profile.address")}:</strong> {address || "N/A"}
               </p>
-              <p>
-                <strong>Region(s):</strong>{" "}
+              <div>
+                <strong>{t("profile.regions")}:</strong>{" "}
                 {editing ? (
                   <div className="flex gap-4 mt-2">
                     {["Miami-Dade", "Broward"].map((region) => (
@@ -155,9 +174,9 @@ export default function Profile() {
                 ) : (
                   formData.trapperRegion.join(", ") || "N/A"
                 )}
-              </p>
+              </div>
               <p>
-                <strong>Equipment Capacity:</strong>{" "}
+                <strong>{t("profile.equipmentCapacity")}:</strong>{" "}
                 {editing ? (
                   <input
                     type="number"
@@ -178,7 +197,7 @@ export default function Profile() {
                 )}
               </p>
               <p>
-                <strong>Recovery Space Limit:</strong>{" "}
+                <strong>{t("profile.recoverySpaceLimit")}:</strong>{" "}
                 {editing ? (
                   <input
                     type="number"
@@ -210,7 +229,7 @@ export default function Profile() {
           {/* Foster Capability */}
           <section>
             <h2 className="text-xl font-semibold text-primary-dark-purple mb-3">
-              Foster Capability
+              {t("profile.fosterCapability")}
             </h2>
 
             {editing ? (
@@ -224,7 +243,7 @@ export default function Profile() {
                         onChange={() => handleCheckboxChange(key)}
                         className="accent-secondary-purple"
                       />
-                      {key.charAt(0).toUpperCase() + key.slice(1)}
+                      {t(`profile.fosterTypes.${key}`)}
                     </label>
                   )
                 )}
@@ -238,14 +257,16 @@ export default function Profile() {
                       key={key}
                       className="flex items-center text-sm text-gray-700"
                     >
-                      <span className="text-success-green mr-2">✔</span>
-                      {key.charAt(0).toUpperCase() + key.slice(1)}
+                      <span className="text-success-green mr-2">✓</span>
+                      {t(`profile.fosterTypes.${key}`)}
                     </li>
                   ))}
                 {
                   // If none are true
                   Object.values(formData.fosterCapability).every((v) => !v) && (
-                    <li className="text-sm text-gray-500 italic">None</li>
+                    <li className="text-sm text-gray-500 italic">
+                      {t("profile.none")}
+                    </li>
                   )
                 }
               </ul>
@@ -255,16 +276,50 @@ export default function Profile() {
           {/* Appointment Metrics */}
           <section>
             <h2 className="text-xl font-semibold text-primary-dark-purple mb-3">
-              Appointment Metrics
+              {t("profile.appointmentMetrics")}
             </h2>
             <p>
-              <strong>Appointments Booked:</strong>{" "}
+              <strong>{t("profile.appointmentsBooked")}:</strong>{" "}
               {performanceMetrics?.totalAppointmentsBooked ?? 0}
             </p>
             <p>
-              <strong>Appointments Completed:</strong>{" "}
+              <strong>{t("profile.appointmentsCompleted")}:</strong>{" "}
               {performanceMetrics?.totalAppointmentsCompleted ?? 0}
             </p>
+          </section>
+
+          {/* Language */}
+          <section>
+            <h2 className="text-xl font-semibold text-primary-dark-purple mb-3">
+              {t("profile.language")}
+            </h2>
+            {editing ? (
+              <div className="flex items-center gap-3">
+                <Globe className="w-5 h-5 text-secondary-purple" />
+                <select
+                  value={formData.language}
+                  onChange={handleLanguageChange}
+                  className="input px-3 py-2"
+                >
+                  <option value="en">English</option>
+                  <option value="es">Español</option>
+                </select>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                {language === "en" ? (
+                  <>
+                    <img src={usFlag} alt="English" className="w-6 h-4" />
+                    <span>English</span>
+                  </>
+                ) : (
+                  <>
+                    <img src={esFlag} alt="Español" className="w-6 h-4" />
+                    <span>Español</span>
+                  </>
+                )}
+              </div>
+            )}
           </section>
         </div>
         {/* Edit Buttons */}
@@ -276,14 +331,14 @@ export default function Profile() {
                 className="outline-button"
                 disabled={saving}
               >
-                Cancel
+                {t("profile.cancel")}
               </button>
               <button
                 onClick={handleSave}
                 className="button mt-4"
                 disabled={saving}
               >
-                {saving ? <LoadingSpinner size="sm" /> : "Save"}
+                {saving ? <LoadingSpinner size="sm" /> : t("profile.save")}
               </button>
             </>
           ) : (
@@ -292,7 +347,7 @@ export default function Profile() {
               className="button flex items-center gap-2"
             >
               <SquarePen className="w-4 h-4" />
-              Edit
+              {t("profile.edit")}
             </button>
           )}
         </div>
@@ -302,7 +357,7 @@ export default function Profile() {
       <div className="md:hidden">
         <button onClick={handleLogout} className="red-button mt-4 w-full gap-2">
           <LogoutIcon />
-          Logout
+          {t("profile.logout")}
         </button>
       </div>
     </div>

@@ -1,11 +1,13 @@
 import { Link, useLocation } from "react-router-dom";
 import { Home, CalendarDays, User, Users, ClipboardList } from "lucide-react";
 import { LogoHorizontalWhite } from "../svgs/Logos";
-import { useAuth } from "../contexts/AuthContext"; // Import useAuth
+import { useAuth } from "../contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 
 const DesktopSidebar = () => {
   const location = useLocation();
-  const { currentUser } = useAuth(); // Get the logged-in user
+  const { currentUser } = useAuth();
+  const { t } = useTranslation("common");
 
   const isActive = (path) => location.pathname === path;
 
@@ -23,39 +25,48 @@ const DesktopSidebar = () => {
       </Link>
 
       <nav className="flex flex-col flex-grow">
-        <Link to="/" className={navLinkClasses("/")}>
+        <Link to="/" className={navLinkClasses("/")} aria-label={t("nav.home")}>
           <Home size={24} className="mr-3" />
-          Home
+          {t("nav.home")}
         </Link>
-        <Link to="/appointments" className={navLinkClasses("/appointments")}>
+        <Link
+          to="/appointments"
+          className={navLinkClasses("/appointments")}
+          aria-label={t("nav.appointments")}
+        >
           <CalendarDays size={24} className="mr-3" />
-          Appointments
+          {t("nav.appointments")}
         </Link>
 
-        {/* Admin-only pages */}
         {currentUser?.role === "admin" && (
           <>
             <Link
               to="/accounts-manager"
               className={navLinkClasses("/accounts-manager")}
+              aria-label={t("nav.accountsManager")}
             >
               <Users size={24} className="mr-3" />
-              Accounts Manager
+              {t("nav.accountsManager")}
             </Link>
             <Link
               to="/appointments-manager"
               className={navLinkClasses("/appointments-manager")}
+              aria-label={t("nav.appointmentsManager")}
             >
               <ClipboardList size={24} className="mr-3" />
-              Appointments Manager
+              {t("nav.appointmentsManager")}
             </Link>
           </>
         )}
 
         <div className="mt-auto">
-          <Link to="/profile" className={navLinkClasses("/profile")}>
+          <Link
+            to="/profile"
+            className={navLinkClasses("/profile")}
+            aria-label={t("nav.profile")}
+          >
             <User size={24} className="mr-3" />
-            Profile
+            {t("nav.profile")}
           </Link>
         </div>
       </nav>

@@ -22,12 +22,18 @@ import {
 import { httpsCallable } from "firebase/functions";
 import { useAuth } from "../contexts/AuthContext";
 import { formatPhoneNumber } from "../utils/phoneNumberReformatter";
+import { useTranslation, Trans } from "react-i18next";
 
 export default function AccountsManager() {
   const { currentUser } = useAuth();
+  const { i18n, t } = useTranslation();
+
+  // State for managing users and filters
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
+
+  // New state for account modal
   const [isAccountModalOpen, setAccountModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -135,7 +141,6 @@ export default function AccountsManager() {
               uid: selectedUser.id,
               newEmail: userData.email,
             });
-            console.log("Email updated via Cloud Function.");
           } catch (emailError) {
             console.error("Failed to update email:", emailError);
             alert(`Email change failed: ${emailError.message}`);
@@ -153,7 +158,6 @@ export default function AccountsManager() {
               uid: selectedUser.id,
               newCode: userData.code,
             });
-            console.log("User password (code) updated via Cloud Function.");
           } catch (passwordError) {
             console.error(
               "Error changing user password via Cloud Function:",
@@ -179,8 +183,6 @@ export default function AccountsManager() {
         const result = await createNewUser({
           ...userData,
         });
-
-        console.log("User created successfully:", result.data);
 
         fetchUsers();
       } catch (error) {
@@ -209,7 +211,6 @@ export default function AccountsManager() {
       await updateDoc(userDocRef, {
         performanceMetrics: metricsData,
       });
-      console.log("User performance metrics updated successfully!");
       fetchUsers(); // Re-fetch users to update the UI
     } catch (error) {
       console.error("Error updating user performance metrics:", error);
@@ -249,11 +250,28 @@ export default function AccountsManager() {
     setRegionFilter("");
   };
 
+  const roleKey = (selectedUserDetails?.role || "").toLowerCase();
+  const roleLabel = t(
+    `roles.${roleKey}`,
+    roleKey ? roleKey[0].toUpperCase() + roleKey.slice(1) : ""
+  );
+
+  const regionDisplay = Array.isArray(selectedUserDetails?.trapperRegion)
+    ? selectedUserDetails.trapperRegion.join(", ")
+    : selectedUserDetails?.trapperRegion || t("common.na");
+
+  const fosterLabels = selectedUserDetails?.fosterCapability
+    ? Object.entries(selectedUserDetails.fosterCapability)
+        .filter(([, val]) => val === true)
+        .map(([key]) => t(`profile.fosterTypes.${key}`))
+        .join(", ")
+    : null;
+
   if (currentUser?.role !== "admin") {
     return (
       <div className="flex items-center justify-center h-screen">
         <h1 className="text-2xl font-bold text-error-red">
-          You do not have permission to access this page.
+          {t("errors.noPermission")}
         </h1>
       </div>
     );
@@ -263,11 +281,11 @@ export default function AccountsManager() {
     <>
       <header className="w-full flex flex-col md:flex-row justify-between border-b-2 border-tertiary-purple p-8">
         <h1 className="font-bold text-2xl pb-4 md:pb-0 text-primary-dark-purple">
-          Manage Accounts
+          {t("accounts.manageTitle")}
         </h1>
         <button onClick={handleAdd} className="button">
           <Plus />
-          <span>Add User</span>
+          <span>{t("accounts.addUser")}</span>
         </button>
       </header>
 
@@ -295,13 +313,12 @@ export default function AccountsManager() {
           isOpen={isDeleteModalOpen}
           onClose={() => setDeleteModalOpen(false)}
           onConfirm={confirmDelete}
-          title="Delete User"
+          title={t("accounts.deleteUserTitle")}
           isDeleting={isDeleting}
           message={
             <>
               <p>
-                Are you sure you want to delete this user account? This action
-                cannot be undone.
+                <Trans i18nKey="accounts.deleteUserMessage" />
               </p>
               <p className="text-center py-2">
                 <strong>
@@ -325,61 +342,61 @@ export default function AccountsManager() {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
                 <div>
-                  <h3 className="text-xl font-semibold mb-2">Contact Info:</h3>
+                  <h3 className="text-xl font-semibold mb-2">
+                    {t("accounts.sections.contactInfo")}
+                  </h3>
                   <p>
-                    <strong>Email:</strong> {selectedUserDetails.email}
+                    <strong>{t("profile.email")}:</strong>{" "}
+                    {selectedUserDetails.email}
                   </p>
                   <p>
-                    <strong>Role:</strong>{" "}
-                    {selectedUserDetails.role.charAt(0).toUpperCase() +
-                      selectedUserDetails.role.slice(1)}
+                    <strong>{t("accounts.fields.role")}:</strong>{" "}
+                    {roleLabel || t("common.na")}
                   </p>
                   <p>
-                    <strong>Phone:</strong>{" "}
+                    <strong>{t("profile.phone")}:</strong>{" "}
                     {selectedUserDetails.phone
                       ? formatPhoneNumber(selectedUserDetails.phone)
-                      : "N/A"}
+                      : t("common.na")}
                   </p>
                   <p>
-                    <strong>Address:</strong> {selectedUserDetails.address}
+                    <strong>{t("profile.address")}:</strong>{" "}
+                    {selectedUserDetails.address || t("common.na")}
                   </p>
                 </div>
+
                 <div>
-                  <h3 className="text-xl font-semibold mb-2">Trapper Info:</h3>
+                  <h3 className="text-xl font-semibold mb-2">
+                    {t("accounts.sections.trapperInfo")}
+                  </h3>
                   <p>
-                    <strong>Code:</strong> {selectedUserDetails.code}
+                    <strong>{t("accounts.fields.code")}:</strong>{" "}
+                    {selectedUserDetails.code}
                   </p>
                   <p>
-                    <strong>Equipment:</strong> {selectedUserDetails.equipment}
+                    <strong>{t("accounts.fields.equipment")}:</strong>{" "}
+                    {selectedUserDetails.equipment ?? t("common.na")}
                   </p>
                   <p>
-                    <strong>Trapper Region:</strong>{" "}
-                    {selectedUserDetails.trapperRegion || "N/A"}
+                    <strong>{t("accounts.fields.trapperRegion")}:</strong>{" "}
+                    {regionDisplay}
                   </p>
                   <p>
-                    <strong>Recovery Space Limit:</strong>{" "}
-                    {selectedUserDetails.recoverySpaceLimit ?? "N/A"}
+                    <strong>{t("accounts.fields.recoverySpaceLimit")}:</strong>{" "}
+                    {selectedUserDetails.recoverySpaceLimit ?? t("common.na")}
                   </p>
                   <p>
-                    <strong>Foster Capability:</strong>{" "}
-                    {selectedUserDetails.fosterCapability
-                      ? Object.entries(selectedUserDetails.fosterCapability)
-                          .filter(([_, val]) => val === true)
-                          .map(
-                            ([key]) =>
-                              key.charAt(0).toUpperCase() + key.slice(1)
-                          )
-                          .join(", ") || "None"
-                      : "N/A"}
+                    <strong>{t("accounts.fields.fosterCapability")}:</strong>{" "}
+                    {fosterLabels || t("profile.none")}
                   </p>
                 </div>
+
                 {/* Performance Metrics */}
                 <div>
                   <div className="flex items-center gap-4">
                     <h3 className="text-xl font-semibold mb-2">
-                      Performance Metrics:
+                      {t("accounts.metrics.title")}
                     </h3>
-                    {/* Button to open Performance Metrics Modal */}
                     <button
                       onClick={handleEditMetricsClick}
                       disabled={!selectedUserId}
@@ -388,45 +405,50 @@ export default function AccountsManager() {
                           ? "bg-secondary-purple text-white hover:cursor-pointer hover:bg-accent-purple"
                           : "bg-gray-300 text-gray-500 cursor-not-allowed"
                       }`}
+                      aria-label={t("accounts.metrics.edit")}
+                      title={t("accounts.metrics.edit")}
                     >
                       <ChartSpline className="w-4 h-4" />
-                      Edit Metrics
+                      {t("accounts.metrics.edit")}
                     </button>
                   </div>
+
                   {selectedUserDetails.performanceMetrics ? (
                     <>
                       <p>
-                        <strong>Commitment Score:</strong>{" "}
+                        <strong>
+                          {t("accounts.metrics.commitmentScore")}:
+                        </strong>{" "}
                         {selectedUserDetails.performanceMetrics
                           .commitmentScore || 0}
                       </p>
                       <p>
-                        <strong>Strikes:</strong>{" "}
+                        <strong>{t("accounts.metrics.strikes")}:</strong>{" "}
                         {selectedUserDetails.performanceMetrics.strikes || 0}
                       </p>
                       <p>
-                        <strong>Appointments Booked:</strong>{" "}
+                        <strong>{t("profile.appointmentsBooked")}:</strong>{" "}
                         {selectedUserDetails.performanceMetrics
                           .totalAppointmentsBooked || 0}
                       </p>
                       <p>
-                        <strong>Appointments Completed:</strong>{" "}
+                        <strong>{t("profile.appointmentsCompleted")}:</strong>{" "}
                         {selectedUserDetails.performanceMetrics
                           .totalAppointmentsCompleted || 0}
                       </p>
                       <p>
-                        <strong>Appointments Overbooked:</strong>{" "}
+                        <strong>{t("accounts.metrics.overbooked")}:</strong>{" "}
                         {selectedUserDetails.performanceMetrics
                           .totalAppointmentsOverBooked || 0}
                       </p>
                       <p>
-                        <strong>Appointments Underbooked:</strong>{" "}
+                        <strong>{t("accounts.metrics.underbooked")}:</strong>{" "}
                         {selectedUserDetails.performanceMetrics
                           .totalAppointmentsUnderBooked || 0}
                       </p>
                     </>
                   ) : (
-                    <p>No performance metrics available.</p>
+                    <p>{t("accounts.noMetrics")}</p>
                   )}
                 </div>
               </div>
@@ -455,7 +477,8 @@ export default function AccountsManager() {
           <div className="relative md:flex-grow">
             <input
               type="text"
-              placeholder="Search by Name or Number"
+              placeholder={t("accounts.filters.searchPlaceholder")}
+              aria-label={t("accounts.filters.searchPlaceholder")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="p-2 border outline-accent-purple rounded-lg w-full pl-10"
@@ -463,13 +486,15 @@ export default function AccountsManager() {
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-primary-dark-purple"
               size={20}
+              aria-hidden="true"
             />
           </div>
 
           {/* Equipment Filter */}
           <input
             type="number"
-            placeholder="Min Equipment Capacity"
+            placeholder={t("accounts.filters.equipmentMinPlaceholder")}
+            aria-label={t("accounts.filters.equipmentMinPlaceholder")}
             value={equipmentFilter}
             onChange={(e) => setEquipmentFilter(e.target.value)}
             className="p-2 border outline-accent-purple rounded-lg w-full md:w-auto md:min-w-[180px]"
@@ -480,19 +505,26 @@ export default function AccountsManager() {
             value={regionFilter}
             onChange={(e) => setRegionFilter(e.target.value)}
             className="p-2 border outline-accent-purple rounded-lg w-full md:w-auto md:min-w-[140px]"
+            aria-label={t("accounts.filters.region.label")}
           >
-            <option value="">All Regions</option>
-            <option value="Broward">Broward</option>
-            <option value="Miami-Dade">Miami-Dade</option>
+            <option value="">{t("accounts.filters.region.all")}</option>
+            <option value="Broward">
+              {t("accounts.filters.region.broward")}
+            </option>
+            <option value="Miami-Dade">
+              {t("accounts.filters.region.miamiDade")}
+            </option>
           </select>
 
           {/* Reset Button */}
           <button
             onClick={handleResetFilters}
             className="px-4 py-2 cursor-pointer bg-secondary-purple text-white rounded-lg hover:bg-accent-purple flex items-center justify-center gap-2 w-full md:w-auto md:whitespace-nowrap"
+            aria-label={t("accounts.filters.reset")}
+            title={t("accounts.filters.reset")}
           >
             <RotateCcw size={18} />
-            <span>Reset Filters</span>
+            <span>{t("accounts.filters.reset")}</span>
           </button>
         </div>
 
@@ -503,13 +535,27 @@ export default function AccountsManager() {
             <table className="w-full min-w-full divide-y rounded-xl divide-tertiary-purple">
               <thead className="sticky top-0 z-10 bg-secondary-purple text-primary-white">
                 <tr>
-                  <th className="px-6 py-3 text-left">Number</th>
-                  <th className="px-6 py-3 text-left">Name</th>
-                  <th className="px-6 py-3 text-left">Role</th>
-                  <th className="px-6 py-3 text-left">Code</th>
-                  <th className="px-6 py-3 text-left">Phone</th>
-                  <th className="px-6 py-3 text-left">Region</th>
-                  <th className="px-6 py-3 text-right">Eqpt</th>
+                  <th className="px-6 py-3 text-left">
+                    {t("accounts.table.number")}
+                  </th>
+                  <th className="px-6 py-3 text-left">
+                    {t("accounts.table.name")}
+                  </th>
+                  <th className="px-6 py-3 text-left">
+                    {t("accounts.table.role")}
+                  </th>
+                  <th className="px-6 py-3 text-left">
+                    {t("accounts.table.code")}
+                  </th>
+                  <th className="px-6 py-3 text-left">
+                    {t("accounts.table.phone")}
+                  </th>
+                  <th className="px-6 py-3 text-left">
+                    {t("accounts.table.region")}
+                  </th>
+                  <th className="px-6 py-3 text-right">
+                    {t("accounts.table.equipmentShort")}
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-primary-white divide-y divide-gray-300 text-primary-dark-purple hover:cursor-pointer">
@@ -530,9 +576,16 @@ export default function AccountsManager() {
                     <td className="px-6 py-4">
                       {user.phone ? formatPhoneNumber(user.phone) : "N/A"}
                     </td>
-                    <td className="px-6 py-4">{user.trapperRegion || "N/A"}</td>
+                    <td className="px-6 py-4">
+                      {Array.isArray(user.trapperRegion)
+                        ? user.trapperRegion.join(", ")
+                        : user.trapperRegion || "N/A"}
+                    </td>
                     <td className="px-6 py-4 text-right">
-                      {user.equipment ?? "N/A"}
+                      {Number.isFinite(Number(user.equipment)) &&
+                      Number(user.equipment) >= 0
+                        ? Number(user.equipment)
+                        : 0}
                     </td>
                   </tr>
                 ))}

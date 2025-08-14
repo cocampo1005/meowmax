@@ -1,5 +1,4 @@
-// src/pages/BookAppointmentPage.jsx
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   collection,
   query,
@@ -20,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { SuccessIcon } from "../svgs/Icons";
 import { DateTime } from "luxon";
 import { LogoMeowMaxed } from "../svgs/Logos";
+import { useTranslation, Trans } from "react-i18next";
 
 // Clinic Data
 const CLINIC = {
@@ -31,6 +31,9 @@ const CLINIC = {
 export default function BookAppointmentPage() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
+  const { i18n, t } = useTranslation("common");
+  const lang = i18n.language?.startsWith("es") ? "es-ES" : "en-US";
+  const dtLocale = i18n.language?.startsWith("es") ? "es" : "en";
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
@@ -45,7 +48,7 @@ export default function BookAppointmentPage() {
   const [notes, setNotes] = useState("");
   const [bookingLoading, setBookingLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [appointmentCapacitiesMap, setAppointmentCapacitiesMap] = useState({}); // New state for capacities map
+  const [appointmentCapacitiesMap, setAppointmentCapacitiesMap] = useState({});
 
   // State for Confirmation Modal
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
@@ -55,72 +58,75 @@ export default function BookAppointmentPage() {
   // --- Slot Availability Logic ---
 
   // Function to fetch available slots for a selected date
-  const fetchAvailableSlotsForDate = useCallback(async (date) => {
-    setLoadingSlots(true);
-    setError(null);
-    setTnvrSlotsToBook(0);
-    setFosterSlotsToBook(0);
+  const fetchAvailableSlotsForDate = useCallback(
+    async (date) => {
+      setLoadingSlots(true);
+      setError(null);
+      setTnvrSlotsToBook(0);
+      setFosterSlotsToBook(0);
 
-    const docId = date.toISOString().split("T")[0]; // e.g., "YYYY-MM-DD"
+      const docId = date.toISOString().split("T")[0]; // e.g., "YYYY-MM-DD"
 
-    try {
-      // Fetch daily capacity first using the document ID
-      const capacityDocRef = doc(db, "appointmentCapacities", docId);
-      const capacityDoc = await getDoc(capacityDocRef);
+      try {
+        // Fetch daily capacity first using the document ID
+        const capacityDocRef = doc(db, "appointmentCapacities", docId);
+        const capacityDoc = await getDoc(capacityDocRef);
 
-      let tnvrCap = 0;
-      let fosterCap = 0;
+        let tnvrCap = 0;
+        let fosterCap = 0;
 
-      if (capacityDoc.exists()) {
-        const data = capacityDoc.data();
-        tnvrCap = data.tnvrCapacity || 0;
-        fosterCap = data.fosterCapacity || 0;
-      }
-      setDailyCapacity({ tnvr: tnvrCap, foster: fosterCap });
-
-      const timeZone = "America/New_York";
-
-      const startOfDay = DateTime.fromJSDate(date, { zone: timeZone })
-        .startOf("day")
-        .toJSDate();
-
-      const endOfDay = DateTime.fromJSDate(date, { zone: timeZone })
-        .endOf("day")
-        .toJSDate();
-
-      const appointmentsRef = collection(db, "appointments");
-      const q = query(
-        appointmentsRef,
-        where("appointmentTime", ">=", Timestamp.fromDate(startOfDay)),
-        where("appointmentTime", "<=", Timestamp.fromDate(endOfDay)),
-        where("clinicAddress", "==", CLINIC.address)
-      );
-
-      const querySnapshot = await getDocs(q);
-      let bookedTNVR = 0;
-      let bookedFoster = 0;
-
-      querySnapshot.forEach((doc) => {
-        const appointment = doc.data();
-        if (appointment.serviceType === "TNVR") {
-          bookedTNVR++;
-        } else if (appointment.serviceType === "Foster") {
-          bookedFoster++;
+        if (capacityDoc.exists()) {
+          const data = capacityDoc.data();
+          tnvrCap = data.tnvrCapacity || 0;
+          fosterCap = data.fosterCapacity || 0;
         }
-      });
+        setDailyCapacity({ tnvr: tnvrCap, foster: fosterCap });
 
-      setAvailableSlots({
-        tnvr: tnvrCap - bookedTNVR,
-        foster: fosterCap - bookedFoster,
-      });
-    } catch (err) {
-      console.error("Error fetching available slots:", err);
-      setError("Failed to load available slots.");
-      setAvailableSlots({ tnvr: 0, foster: 0 });
-    } finally {
-      setLoadingSlots(false);
-    }
-  }, []);
+        const timeZone = "America/New_York";
+
+        const startOfDay = DateTime.fromJSDate(date, { zone: timeZone })
+          .startOf("day")
+          .toJSDate();
+
+        const endOfDay = DateTime.fromJSDate(date, { zone: timeZone })
+          .endOf("day")
+          .toJSDate();
+
+        const appointmentsRef = collection(db, "appointments");
+        const q = query(
+          appointmentsRef,
+          where("appointmentTime", ">=", Timestamp.fromDate(startOfDay)),
+          where("appointmentTime", "<=", Timestamp.fromDate(endOfDay)),
+          where("clinicAddress", "==", CLINIC.address)
+        );
+
+        const querySnapshot = await getDocs(q);
+        let bookedTNVR = 0;
+        let bookedFoster = 0;
+
+        querySnapshot.forEach((doc) => {
+          const appointment = doc.data();
+          if (appointment.serviceType === "TNVR") {
+            bookedTNVR++;
+          } else if (appointment.serviceType === "Foster") {
+            bookedFoster++;
+          }
+        });
+
+        setAvailableSlots({
+          tnvr: tnvrCap - bookedTNVR,
+          foster: fosterCap - bookedFoster,
+        });
+      } catch (err) {
+        console.error("Error fetching available slots:", err);
+        setError(t("errors.failedToLoad") + " available slots.");
+        setAvailableSlots({ tnvr: 0, foster: 0 });
+      } finally {
+        setLoadingSlots(false);
+      }
+    },
+    [t]
+  );
 
   // Effect to fetch capacities for all days in the current month
   useEffect(() => {
@@ -137,19 +143,15 @@ export default function BookAppointmentPage() {
       );
 
       const capacitiesRef = collection(db, "appointmentCapacities");
-      // Query for all documents in the collection (or a reasonable range if your collection is huge)
-      // Since document IDs are date strings, we can't directly query by Timestamp field that doesn't exist.
-      // We will fetch all and filter client-side by month based on doc.id.
-      // If your collection becomes very large, consider re-adding a 'date' field as Timestamp for server-side filtering.
-      const q = query(capacitiesRef); // Fetch all documents in the collection
+      const q = query(capacitiesRef);
 
       try {
         const querySnapshot = await getDocs(q);
         const capacities = {};
         querySnapshot.forEach((doc) => {
-          const docId = doc.id; // doc.id is already "YYYY-MM-DD"
+          const docId = doc.id;
           const [year, month, day] = docId.split("-").map(Number);
-          const docDate = new Date(year, month - 1, day); // Month is 0-indexed in JS Date
+          const docDate = new Date(year, month - 1, day);
 
           // Filter client-side to include only documents for the current month
           if (
@@ -170,7 +172,7 @@ export default function BookAppointmentPage() {
     };
 
     fetchMonthlyCapacities();
-  }, [currentMonth]); // Re-fetch when currentMonth changes
+  }, [currentMonth]);
 
   // Fetch available slots when selectedDate changes
   useEffect(() => {
@@ -208,7 +210,7 @@ export default function BookAppointmentPage() {
     setSelectedDate(null);
     setTnvrSlotsToBook(0);
     setFosterSlotsToBook(0);
-    setNotes(""); // Clear notes on reset
+    setNotes("");
   };
 
   const goToPreviousMonth = () => {
@@ -258,16 +260,15 @@ export default function BookAppointmentPage() {
     const dayOfWeek = date.getDay();
     const isPast = date < new Date().setHours(0, 0, 0, 0);
     const isClinicClosed =
-      dayOfWeek === 4 || dayOfWeek === 5 || dayOfWeek === 6; // Thursday, Friday, Saturday
+      dayOfWeek === 4 || dayOfWeek === 5 || dayOfWeek === 6;
 
     if (isPast || isClinicClosed) return;
 
-    const docId = date.toISOString().split("T")[0]; // e.g., "YYYY-MM-DD"
+    const docId = date.toISOString().split("T")[0];
     const capacityData = appointmentCapacitiesMap[docId];
 
     if (!capacityData) {
       console.log("No capacity set for selected date.");
-      // Optionally, you can set an error or message to the user
       setError("No capacity information available for this date.");
       return;
     }
@@ -280,31 +281,20 @@ export default function BookAppointmentPage() {
       setError("No available slots for any service on this date.");
       return;
     }
-    setError(null); // Clear previous error if selection is valid
+    setError(null);
     setSelectedDate(date);
-    // Capacity and available slots will be set by the useEffect watching selectedDate
   };
 
   // --- Booking Logic ---
 
   const handleBookAppointment = async () => {
-    console.log("🔥 Booking started");
-    console.log("Selected Date:", selectedDate);
-    console.log(
-      "Slots to book — TNVR:",
-      tnvrSlotsToBook,
-      "Foster:",
-      fosterSlotsToBook
-    );
-    console.log("Current User:", currentUser);
-
     if (
       !selectedDate ||
       (!tnvrSlotsToBook && !fosterSlotsToBook) ||
       !currentUser
     ) {
-      setError("Please select a date, and at least one slot.");
-      console.warn("❌ Missing required info to book");
+      setError(t("book.validation.missingDateOrSlots"));
+      console.warn("⚠ Missing required info to book");
       return;
     }
 
@@ -313,14 +303,14 @@ export default function BookAppointmentPage() {
       !currentUser.lastName ||
       !currentUser.trapperNumber
     ) {
-      setError("Your profile is missing required information.");
-      console.warn("❌ currentUser is missing profile fields:", currentUser);
+      setError(t("book.validation.missingProfile"));
+      console.warn("⚠ currentUser is missing profile fields:", currentUser);
       return;
     }
 
     if (tnvrSlotsToBook < 0 || fosterSlotsToBook < 0) {
-      setError("Number of slots cannot be negative.");
-      console.warn("❌ Negative slot count");
+      setError(t("book.validation.negativeSlots"));
+      console.warn("⚠ Negative slot count");
       return;
     }
 
@@ -328,8 +318,8 @@ export default function BookAppointmentPage() {
       tnvrSlotsToBook > availableSlots.tnvr ||
       fosterSlotsToBook > availableSlots.foster
     ) {
-      setError("You are trying to book more slots than available.");
-      console.warn("❌ Overbooking detected");
+      setError(t("book.validation.overbooking"));
+      console.warn("⚠ Overbooking detected");
       fetchAvailableSlotsForDate(selectedDate);
       return;
     }
@@ -352,11 +342,9 @@ export default function BookAppointmentPage() {
       const appointmentsRef = collection(db, "appointments");
       const bookedAppointmentDetailsList = [];
 
-      console.log("📝 Starting transaction...");
-
       await runTransaction(db, async (transaction) => {
         for (let i = 0; i < tnvrSlotsToBook; i++) {
-          const docRef = doc(appointmentsRef); // creates new doc ID
+          const docRef = doc(appointmentsRef);
           const appointmentData = {
             userId: currentUser.uid,
             trapperFirstName: currentUser.firstName,
@@ -373,7 +361,6 @@ export default function BookAppointmentPage() {
             lastModifiedByUserId: currentUser.uid,
             notes,
           };
-          console.log("🟣 Setting TNVR appointment:", appointmentData);
           transaction.set(docRef, appointmentData);
           bookedAppointmentDetailsList.push(appointmentData);
         }
@@ -396,13 +383,10 @@ export default function BookAppointmentPage() {
             lastModifiedByUserId: currentUser.uid,
             notes,
           };
-          console.log("🟢 Setting Foster appointment:", appointmentData);
           transaction.set(docRef, appointmentData);
           bookedAppointmentDetailsList.push(appointmentData);
         }
       });
-
-      console.log("✅ Transaction committed successfully");
 
       const totalBookedCount = tnvrSlotsToBook + fosterSlotsToBook;
 
@@ -411,7 +395,6 @@ export default function BookAppointmentPage() {
         "performanceMetrics.totalAppointmentsBooked":
           increment(totalBookedCount),
       });
-      console.log("📈 Updated performance metrics");
 
       setBookedAppointmentDetails({
         bookedCount: totalBookedCount,
@@ -427,14 +410,13 @@ export default function BookAppointmentPage() {
       });
 
       setShowConfirmationModal(true);
-      console.log("🎉 Booking success — showing confirmation modal");
 
       const previouslySelectedDate = selectedDate;
       resetSelection();
       fetchAvailableSlotsForDate(previouslySelectedDate);
     } catch (err) {
-      console.error("❌ Error booking appointment:", err);
-      setError(err.message || "Failed to book appointment. Please try again.");
+      console.error("⚠ Error booking appointment:", err);
+      setError(err.message || t("errors.somethingWentWrong"));
     } finally {
       setBookingLoading(false);
     }
@@ -456,10 +438,34 @@ export default function BookAppointmentPage() {
   const displayedTotalBookedFoster =
     alreadyBookedFosterSlots + fosterSlotsToBook;
 
+  // Helper function to get localized month name
+  const getLocalizedMonth = (date) => {
+    const monthKey = date.toLocaleString("en", { month: "long" }).toLowerCase();
+    return t(`calendar.months.${monthKey}`);
+  };
+
+  // Helper function to get localized weekday name
+  const getLocalizedWeekday = (date) => {
+    const dayKey = date.toLocaleString("en", { weekday: "long" }).toLowerCase();
+    return t(`calendar.weekdays.${dayKey}`);
+  };
+
+  const formattedSelectedDate = selectedDate
+    ? DateTime.fromJSDate(selectedDate)
+        .setLocale(dtLocale)
+        .toLocaleString({ month: "long", day: "numeric", year: "numeric" })
+    : "";
+
+  const bookedCount = useMemo(
+    () => Number(bookedAppointmentDetails?.bookedCount ?? 0),
+    [bookedAppointmentDetails?.bookedCount]
+  );
+  const ctx = bookedCount === 1 ? "singular" : "plural";
+
   return (
     <div className="container mx-auto p-8 pb-24 md:p-8 md:max-w-3xl">
       <h1 className="text-2xl text-center text-accent-purple font-bold mb-4">
-        Book Appointment
+        {t("book.title")}
       </h1>
 
       {/* Calendar Header */}
@@ -471,10 +477,7 @@ export default function BookAppointmentPage() {
           &lt;
         </button>
         <h2 className="text-xl text-accent-purple font-bold">
-          {currentMonth.toLocaleString("default", {
-            month: "long",
-            year: "numeric",
-          })}
+          {getLocalizedMonth(currentMonth)} {currentMonth.getFullYear()}
         </h2>
         <button
           onClick={goToNextMonth}
@@ -486,13 +489,13 @@ export default function BookAppointmentPage() {
 
       {/* Calendar Grid (Days of the week header) */}
       <div className="grid grid-cols-7 text-center text-sm font-medium mb-2">
-        <div>Sun</div>
-        <div>Mon</div>
-        <div>Tue</div>
-        <div>Wed</div>
-        <div>Thu</div>
-        <div>Fri</div>
-        <div>Sat</div>
+        <div>{t("days.sun")}</div>
+        <div>{t("days.mon")}</div>
+        <div>{t("days.tue")}</div>
+        <div>{t("days.wed")}</div>
+        <div>{t("days.thu")}</div>
+        <div>{t("days.fri")}</div>
+        <div>{t("days.sat")}</div>
       </div>
 
       {/* Calendar Grid (Days) */}
@@ -509,7 +512,7 @@ export default function BookAppointmentPage() {
           const isPastDate = date && date < new Date().setHours(0, 0, 0, 0);
           const dayOfWeek = date ? date.getDay() : null;
           const isClinicClosed =
-            dayOfWeek === 4 || dayOfWeek === 5 || dayOfWeek === 6; // Thursday, Friday, Saturday
+            dayOfWeek === 4 || dayOfWeek === 5 || dayOfWeek === 6;
           const docId = date ? date.toISOString().split("T")[0] : null;
           const capacityForDay = appointmentCapacitiesMap[docId];
           const isCapacityMissing = !capacityForDay;
@@ -563,33 +566,31 @@ export default function BookAppointmentPage() {
           ) : error && !bookingLoading ? (
             <div className="text-red-500">{error}</div>
           ) : availableSlots.tnvr === 0 && availableSlots.foster === 0 ? (
-            // NEW: Check if all slots are fully booked
             <div className="flex flex-col items-center justify-center text-center py-8 text-accent-purple">
               <LogoMeowMaxed />
               <div className="text-lg font-semibold mb-2">
-                All slots have been fully booked for this day.
+                {t("book.fullyBooked.title")}
               </div>
-              <div className="text-sm">
-                Please select another date or check back later for
-                cancellations.
-              </div>
+              <div className="text-sm">{t("book.fullyBooked.hint")}</div>
             </div>
           ) : (
             <>
               <h3 className="text-lg text-accent-purple font-semibold mb-4">
-                Available Slots for {selectedDate.toLocaleDateString()} at{" "}
-                {CLINIC.name}
+                {t("book.availableSlotsHeader", {
+                  date: formattedSelectedDate,
+                  clinic: CLINIC.name,
+                })}
               </h3>
               {/* Slot Quantity Selection and Progress Bars */}
               <div className="mb-4">
                 <h4 className="font-medium text-accent-purple mb-4">
-                  Book Slots:
+                  {t("book.bookSlots")}
                 </h4>
                 <div className="flex flex-col gap-4">
                   {/* TNVR Slots */}
                   <div className="flex items-center gap-4">
                     <label htmlFor="tnvr-slots" className="w-14 font-semibold">
-                      TNVR:
+                      {t("book.tnvr")}:
                     </label>
                     <input
                       id="tnvr-slots"
@@ -640,7 +641,7 @@ export default function BookAppointmentPage() {
                       htmlFor="foster-slots"
                       className="w-14 font-semibold"
                     >
-                      Foster:
+                      {t("book.foster")}:
                     </label>
                     <input
                       id="foster-slots"
@@ -693,7 +694,7 @@ export default function BookAppointmentPage() {
                   htmlFor="notes"
                   className="block text-accent-purple font-medium mb-2"
                 >
-                  Notes (Optional):
+                  {t("book.notes")}
                 </label>
                 <textarea
                   id="notes"
@@ -713,8 +714,10 @@ export default function BookAppointmentPage() {
                 }
               >
                 {bookingLoading
-                  ? "Booking..."
-                  : `Book ${tnvrSlotsToBook + fosterSlotsToBook} Slot(s)`}
+                  ? t("book.booking")
+                  : t("book.bookX", {
+                      count: tnvrSlotsToBook + fosterSlotsToBook,
+                    })}
               </button>
             </>
           )}
@@ -727,33 +730,28 @@ export default function BookAppointmentPage() {
           <div className="absolute w-screen h-screen bg-slate-900 opacity-70"></div>
           <div className="bg-primary-white p-6 rounded-xl shadow-xl max-w-sm w-full mx-4 z-100">
             <h2 className="text-2xl font-bold mb-4 text-center text-accent-purple">
-              {bookedAppointmentDetails.bookedCount > 1
-                ? "Appointments Booked!"
-                : "Appointment Booked!"}
+              {t("book.confirmation.title", { context: ctx })}
             </h2>
+
             <div className="flex items-center justify-center mb-4">
               <SuccessIcon />
             </div>
+
             <p className="mb-2 text-gray-700 text-center">
-              {bookedAppointmentDetails.bookedCount > 1
-                ? "Your appointments are confirmed for:"
-                : "Your appointment is confirmed for:"}
+              {t("book.confirmation.subtitle", { context: ctx })}
             </p>
+
             <div className="text-center mb-4">
               <p className="font-semibold text-3xl">
-                {/* Check if selectedDate is a valid Date object before formatting */}
-                {
-                  bookedAppointmentDetails.selectedDate instanceof Date &&
-                  !isNaN(bookedAppointmentDetails.selectedDate.getTime())
-                    ? `${bookedAppointmentDetails.selectedDate.toLocaleDateString(
-                        undefined,
-                        { weekday: "long" }
-                      )} - ${bookedAppointmentDetails.selectedDate.toLocaleDateString(
-                        undefined,
-                        { month: "long", day: "numeric", year: "numeric" }
-                      )}`
-                    : bookedAppointmentDetails.selectedDate // Fallback for invalid date
-                }
+                {bookedAppointmentDetails.selectedDate instanceof Date &&
+                !isNaN(bookedAppointmentDetails.selectedDate.getTime())
+                  ? `${getLocalizedWeekday(
+                      bookedAppointmentDetails.selectedDate
+                    )} - ${bookedAppointmentDetails.selectedDate.toLocaleDateString(
+                      lang,
+                      { month: "long", day: "numeric", year: "numeric" }
+                    )}`
+                  : bookedAppointmentDetails.selectedDate}
               </p>
               <p className="text-gray-600">
                 {bookedAppointmentDetails.clinicName}
@@ -762,25 +760,28 @@ export default function BookAppointmentPage() {
                 {bookedAppointmentDetails.clinicAddress}
               </p>
             </div>
+
             <div className="text-center mb-4">
               <p className="font-semibold text-md">
-                {bookedAppointmentDetails.bookedCount > 1
-                  ? "Booked slots:"
-                  : "Booked slot:"}
+                {t("book.confirmation.bookedSlotsLabel", { context: ctx })}
               </p>
+
               {bookedAppointmentDetails.serviceTypes.tnvr > 0 && (
                 <p className="text-gray-700">
-                  {bookedAppointmentDetails.serviceTypes.tnvr} x TNVR
+                  {bookedAppointmentDetails.serviceTypes.tnvr} x{" "}
+                  {t("book.tnvr")}
                 </p>
               )}
               {bookedAppointmentDetails.serviceTypes.foster > 0 && (
                 <p className="text-gray-700">
-                  {bookedAppointmentDetails.serviceTypes.foster} x Foster
+                  {bookedAppointmentDetails.serviceTypes.foster} x{" "}
+                  {t("book.foster")}
                 </p>
               )}
             </div>
+
             <button className="button w-full" onClick={handleCloseModal}>
-              Close
+              {t("common.close")}
             </button>
           </div>
         </div>

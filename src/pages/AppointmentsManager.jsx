@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import {
   collection,
   query,
   where,
   orderBy,
-  getDocs,
   getDoc,
   Timestamp,
   deleteDoc,
@@ -19,10 +18,11 @@ import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ConfirmationModal from "../components/ConfirmationModal";
-import AppointmentModal from "../components/AppointmentModal"; // Import the new modal
-import { ChevronLeft, ChevronRight, Edit, Plus } from "lucide-react"; // Add calendar nav, Edit and Plus icons
+import AppointmentModal from "../components/AppointmentModal";
+import { ChevronLeft, ChevronRight, Edit, Plus } from "lucide-react";
 import { ChevronDown, ChevronUp, NotesIcon } from "../svgs/Icons";
 import { DateTime } from "luxon";
+import { useTranslation } from "react-i18next";
 
 // Helper to find the next available date
 const findNextAvailableDate = (startDate) => {
@@ -49,6 +49,9 @@ const findNextAvailableDate = (startDate) => {
 
 export default function AppointmentsManager() {
   const { currentUser } = useAuth();
+  const { i18n, t } = useTranslation();
+  const lang = i18n.language?.startsWith("es") ? "es-ES" : "en-US";
+
   // State to hold all appointments fetched for the selected day
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -234,18 +237,6 @@ export default function AppointmentsManager() {
           ...doc.data(),
         }));
 
-        // 🔍 LOG: Full data with readable date
-        console.log(
-          "🐾 Appointments fetched:",
-          fetchedAppointments.map((a) => ({
-            id: a.id,
-            serviceType: a.serviceType,
-            trapperNumber: a.trapperNumber,
-            appointmentTime: a.appointmentTime?.toDate().toISOString(), // Human-readable
-            clinicAddress: a.clinicAddress,
-          }))
-        );
-
         // Your existing custom sort logic
         fetchedAppointments.sort((a, b) => {
           if (a.serviceType === "TNVR" && b.serviceType !== "TNVR") return -1;
@@ -319,10 +310,6 @@ export default function AppointmentsManager() {
       setIsDeletingIndividual(true);
       try {
         await deleteDoc(doc(db, "appointments", appointmentToCancel.id));
-        console.log(
-          "Appointment successfully canceled:",
-          appointmentToCancel.id
-        );
       } catch (error) {
         console.error("Error canceling appointment:", error);
         console.log("Failed to cancel appointment. Please try again.");
@@ -353,10 +340,6 @@ export default function AppointmentsManager() {
           batch.delete(appointmentRef);
         });
         await batch.commit(); // Commit the batch deletion
-        console.log(
-          "All appointments for group successfully deleted:",
-          groupToDelete.groupKey
-        );
       } catch (error) {
         console.error("Error deleting all appointments for group:", error);
         console.log(
@@ -434,7 +417,6 @@ export default function AppointmentsManager() {
       });
 
       await batch.commit();
-      console.log("Appointments created successfully.");
 
       // Update the trapper's performance metrics
       const userRef = doc(db, "users", trapperUid);
@@ -516,7 +498,7 @@ export default function AppointmentsManager() {
     return (
       <div className="flex items-center justify-center h-screen">
         <h1 className="text-2xl font-bold text-error-red">
-          You do not have permission to access this page.
+          {t("errors.noPermission")}
         </h1>
       </div>
     );
@@ -526,13 +508,13 @@ export default function AppointmentsManager() {
     <>
       <header className="w-full flex flex-col md:flex-row justify-between border-b-2 border-tertiary-purple p-8">
         <h1 className="font-bold text-2xl pb-4 text-primary-dark-purple flex items-center gap-2 md:pb-0">
-          Manage Appointments
+          {t("appointments.manageTitle")}
         </h1>
         <button
           className="button flex items-center gap-1"
           onClick={() => handleOpenCreateAppointmentModal(selectedDate)}
         >
-          <Plus size={20} /> Create New Appointment
+          <Plus size={20} /> {t("appointments.createNew")}
         </button>
       </header>
 
@@ -546,7 +528,7 @@ export default function AppointmentsManager() {
             <ChevronLeft size={24} />
           </button>
           <h2 className="text-xl text-accent-purple font-bold">
-            {currentMonth.toLocaleString("default", {
+            {currentMonth.toLocaleDateString(lang, {
               month: "long",
               year: "numeric",
             })}
@@ -561,13 +543,17 @@ export default function AppointmentsManager() {
 
         {/* Calendar Grid (Days of the week header) */}
         <div className="grid grid-cols-7 text-center text-sm font-medium mb-2">
-          <div>Sun</div>
-          <div>Mon</div>
-          <div>Tue</div>
-          <div>Wed</div>
-          <div>Thu</div>
-          <div>Fri</div>
-          <div>Sat</div>
+          {[
+            t("calendar.weekdaysShort.sun"),
+            t("calendar.weekdaysShort.mon"),
+            t("calendar.weekdaysShort.tue"),
+            t("calendar.weekdaysShort.wed"),
+            t("calendar.weekdaysShort.thu"),
+            t("calendar.weekdaysShort.fri"),
+            t("calendar.weekdaysShort.sat"),
+          ].map((d) => (
+            <div key={d}>{d}</div>
+          ))}
         </div>
 
         {/* Calendar Grid (Days) */}
@@ -630,15 +616,16 @@ export default function AppointmentsManager() {
 
         {/* Display Appointments for Selected Day */}
         <h2 className="text-xl text-primary-dark-purple font-bold mb-4">
-          Appointments for{" "}
           {selectedDate
-            ? selectedDate.toLocaleDateString("en-US", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-                year: "numeric",
+            ? t("appointments.forDate", {
+                date: selectedDate.toLocaleDateString(lang, {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                }),
               })
-            : "Please select a date to view appointments"}
+            : t("appointments.selectDatePrompt")}
         </h2>
         <div className="flex-grow overflow-visible">
           {loading ? (
@@ -648,7 +635,7 @@ export default function AppointmentsManager() {
               {/* TNVR Appointments Section */}
               <div>
                 <div className="text-lg flex gap-4 items-center font-semibold text-primary-dark-purple mb-3 border-b pb-2">
-                  <h3>TNVR Appointments:</h3>
+                  <h3>{t("appointments.tnvrSectionTitle")}</h3>
                   <div className="flex items-center flex-grow">
                     <div className="w-full h-4 bg-gray-200 rounded-l-full overflow-hidden">
                       <div
@@ -727,7 +714,7 @@ export default function AppointmentsManager() {
                                       }}
                                     >
                                       <p className="font-medium">
-                                        TNVR Appointment{" "}
+                                        {t("appointments.tnvrAppointment")}{" "}
                                       </p>
                                       <div className="flex items-center ml-2">
                                         {isAppointmentExpanded ? (
@@ -743,7 +730,7 @@ export default function AppointmentsManager() {
                                           <div className="flex gap-1 items-center">
                                             <NotesIcon />
                                             <span className="font-semibold">
-                                              Notes:
+                                              {t("appointments.notes")}
                                             </span>
                                           </div>
                                           {!isEditingCurrentNote && (
@@ -775,7 +762,7 @@ export default function AppointmentsManager() {
                                                   handleCancelEditNotes();
                                                 }}
                                               >
-                                                Cancel
+                                                {t("common.cancel")}
                                               </button>
                                               <button
                                                 className="button mt-4"
@@ -786,14 +773,14 @@ export default function AppointmentsManager() {
                                                   );
                                                 }}
                                               >
-                                                Save
+                                                {t("common.save")}
                                               </button>
                                             </div>
                                           </>
                                         ) : (
                                           <p className="text-gray-600 ml-6 break-words">
                                             {appointment.notes ||
-                                              "No notes provided."}
+                                              t("appointments.noNotesProvided")}
                                           </p>
                                         )}
                                         <div className="flex justify-end gap-2 mt-3">
@@ -806,7 +793,7 @@ export default function AppointmentsManager() {
                                               );
                                             }}
                                           >
-                                            Release
+                                            {t("appointments.release")}
                                           </button>
                                         </div>
                                       </div>
@@ -822,7 +809,7 @@ export default function AppointmentsManager() {
                                     handleDeleteAllAppointments(group);
                                   }}
                                 >
-                                  Release All TNVR for this person
+                                  {t("appointments.releaseAllTnvrForPerson")}
                                 </button>
                               </div>
                             </div>
@@ -832,7 +819,7 @@ export default function AppointmentsManager() {
                     })
                   ) : (
                     <div className="text-gray-600 col-span-full">
-                      No TNVR appointments for this day.
+                      {t("appointments.noTnvrForDay")}
                     </div>
                   )}
                 </div>
@@ -840,7 +827,7 @@ export default function AppointmentsManager() {
               {/* Foster Appointments Section */}
               <div>
                 <div className="text-lg flex gap-4 items-center font-semibold text-primary-dark-purple mb-3 border-b pb-2">
-                  <h3>Foster Appointments:</h3>
+                  <h3>{t("appointments.fosterSectionTitle")}</h3>
                   <div className="flex items-center flex-grow">
                     <div className="w-full h-4 bg-gray-200 rounded-l-full overflow-hidden">
                       <div
@@ -920,7 +907,7 @@ export default function AppointmentsManager() {
                                       }}
                                     >
                                       <p className="font-medium">
-                                        Foster Appointment{" "}
+                                        {t("appointments.fosterAppointment")}{" "}
                                       </p>
                                       <div className="flex items-center ml-2">
                                         {isAppointmentExpanded ? (
@@ -936,7 +923,7 @@ export default function AppointmentsManager() {
                                           <div className="flex gap-1 items-center">
                                             <NotesIcon />
                                             <span className="font-semibold">
-                                              Notes:
+                                              {t("appointments.notes")}
                                             </span>
                                           </div>
                                           {!isEditingCurrentNote && (
@@ -968,7 +955,7 @@ export default function AppointmentsManager() {
                                                   handleCancelEditNotes();
                                                 }}
                                               >
-                                                Cancel
+                                                {t("common.cancel")}
                                               </button>
                                               <button
                                                 className="button mt-4"
@@ -979,14 +966,14 @@ export default function AppointmentsManager() {
                                                   );
                                                 }}
                                               >
-                                                Save
+                                                {t("common.save")}
                                               </button>
                                             </div>
                                           </>
                                         ) : (
                                           <p className="text-gray-600 ml-6 break-words">
                                             {appointment.notes ||
-                                              "No notes provided."}
+                                              t("appointments.noNotesProvided")}
                                           </p>
                                         )}
                                         <div className="flex justify-end gap-2 mt-3">
@@ -999,7 +986,7 @@ export default function AppointmentsManager() {
                                               );
                                             }}
                                           >
-                                            Release
+                                            {t("appointments.release")}
                                           </button>
                                         </div>
                                       </div>
@@ -1015,7 +1002,7 @@ export default function AppointmentsManager() {
                                     handleDeleteAllAppointments(group);
                                   }}
                                 >
-                                  Release All Foster for this person
+                                  {t("appointments.releaseAllTnvrForPerson")}
                                 </button>
                               </div>
                             </div>
@@ -1025,7 +1012,7 @@ export default function AppointmentsManager() {
                     })
                   ) : (
                     <div className="text-gray-600 col-span-full">
-                      No Foster appointments for this day.
+                      {t("appointments.noFosterForDay")}
                     </div>
                   )}
                 </div>
@@ -1081,11 +1068,11 @@ export default function AppointmentsManager() {
         <AppointmentModal
           isOpen={showAppointmentModal}
           onClose={handleCloseAppointmentModal}
-          appointment={null} // Always null for creation mode
+          appointment={null}
           onSave={async (data) => {
-            await handleSaveAppointment(data); // Pass array of new appointments
+            await handleSaveAppointment(data);
           }}
-          initialDate={initialDateForCreate || selectedDate} // Pre-fill date for new appointments
+          initialDate={initialDateForCreate || selectedDate}
         />
 
         {showCapacityModal && (

@@ -1,0 +1,239 @@
+{
+  "nav": {
+    "home": "Inicio",
+    "appointments": "Citas",
+    "accountsManager": "Gestor de Cuentas",
+    "appointmentsManager": "Gestor de Citas",
+    "profile": "Perfil",
+    "book": "Reservar"
+  },
+  "aria": {
+    "nav": {
+      "home": "Ir al inicio",
+      "appointments": "Ir a Citas",
+      "profile": "Ir al Perfil"
+    }
+  },
+  "roles": {
+    "admin": "Administrador",
+    "trapper": "Trampero",
+    "staff": "Personal",
+    "user": "Usuario"
+  },
+  "accounts": {
+    "manageTitle": "Administrar cuentas",
+    "addUser": "Agregar usuario",
+    "deleteUserTitle": "Eliminar usuario",
+    "deleteUserMessage": "¿Estás seguro de que deseas eliminar esta cuenta de usuario? Esta acción no se puede deshacer.",
+    "sections": {
+      "contactInfo": "Información de contacto:",
+      "trapperInfo": "Información del trampero:"
+    },
+    "fields": {
+      "role": "Rol",
+      "code": "Código",
+      "equipment": "Equipo",
+      "trapperRegion": "Región del trampero",
+      "recoverySpaceLimit": "Límite de espacio de recuperación",
+      "fosterCapability": "Capacidad de acogida"
+    },
+    "metrics": {
+      "title": "Métricas de desempeño:",
+      "edit": "Editar métricas",
+      "commitmentScore": "Puntaje de compromiso",
+      "strikes": "Faltas",
+      "overbooked": "Citas sobre-reservadas",
+      "underbooked": "Citas sub-reservadas"
+    },
+    "table": {
+      "number": "Número",
+      "name": "Nombre",
+      "role": "Rol",
+      "code": "Código",
+      "phone": "Teléfono",
+      "region": "Región",
+      "equipmentShort": "Equip."
+    },
+    "filters": {
+      "searchPlaceholder": "Buscar por nombre o número",
+      "equipmentMinPlaceholder": "Capacidad mínima de equipo",
+      "region": {
+        "label": "Región",
+        "all": "Todas las regiones",
+        "broward": "Broward",
+        "miamiDade": "Miami-Dade"
+      },
+      "reset": "Restablecer filtros"
+    },
+    "noMetrics": "No hay métricas de desempeño disponibles."
+  },
+  "appointments": {
+    "title": "Citas",
+    "upcoming": "Próximas",
+    "history": "Historial",
+    "bookAppointment": "Reservar cita",
+    "manageTitle": "Administrar citas",
+    "createNew": "Crear nueva cita",
+    "forDate": "Citas para {{date}}",
+    "tnvrSectionTitle": "Citas de TNVR:",
+    "tnvrAppointment": "Cita de TNVR",
+    "noNotesProvided": "No se proporcionaron notas.",
+    "releaseAllTnvrForPerson": "Liberar todas las citas de TNVR para esta persona",
+    "noTnvrForDay": "No hay citas de TNVR para este día.",
+    "fosterSectionTitle": "Citas de Foster:",
+    "fosterAppointment": "Cita de Foster",
+    "noFosterForDay": "No hay citas de Foster para este día.",
+    "release": "Liberar",
+    "releaseAll": "Liberar todas las citas de esta fecha",
+    "none": "No hay citas {{view}}.",
+    "date": "Fecha",
+    "serviceType": "Servicio",
+    "clinic": "Clínica",
+    "notes": "Notas",
+    "actions": "Acciones",
+    "noneUpcoming": "No hay próximas citas.",
+    "noneHistory": "No hay citas pasadas.",
+    "showingFromTo": "Mostrando citas del {{start}} al {{end}}",
+    "noSlotsBooked": "Sin cupos reservados",
+    "noEarlierFound": "No se encontraron citas anteriores"
+  },
+  "book": {
+    "title": "Reservar cita",
+    "tnvr": "TNVR",
+    "foster": "Foster",
+    "notes": "Notas (Opcional):",
+    "booking": "Reservando...",
+    "bookSlots": "Reservar cupos:",
+    "bookX": "Reservar {{count}} cupo",
+    "bookX_plural": "Reservar {{count}} cupos",
+    "confirmation": {
+      "title": "¡Cita reservada!",
+      "title_plural": "¡Citas reservadas!",
+      "subtitle": "Tu cita está confirmada para:",
+      "subtitle_plural": "Tus citas están confirmadas para:",
+      "bookedSlotsLabel": "Cupo reservado:",
+      "bookedSlotsLabel_plural": "Cupos reservados:"
+    },
+    "validation": {
+      "missingDateOrSlots": "Selecciona una fecha y al menos un cupo.",
+      "missingProfile": "Tu perfil no tiene la información requerida.",
+      "negativeSlots": "El número de cupos no puede ser negativo.",
+      "overbooking": "Estás intentando reservar más cupos de los disponibles."
+    },
+    "fullyBooked": {
+      "title": "Todos los cupos para este día están completos.",
+      "hint": "Selecciona otra fecha o vuelve más tarde por si hay cancelaciones."
+    },
+    "availableSlotsHeader": "Cupos disponibles para {{date}} en {{clinic}}"
+  },
+  "days": {
+    "sun": "Dom",
+    "mon": "Lun",
+    "tue": "Mar",
+    "wed": "Mié",
+    "thu": "Jue",
+    "fri": "Vie",
+    "sat": "Sáb"
+  },
+  "profile": {
+    "title": "Perfil",
+    "logout": "Cerrar Sesión",
+    "yourInformation": "Tu Información",
+    "email": "Correo",
+    "phone": "Teléfono",
+    "address": "Dirección",
+    "regions": "Región(es)",
+    "equipmentCapacity": "Capacidad de Equipo",
+    "recoverySpaceLimit": "Límite de Espacio de Recuperación",
+    "fosterCapability": "Capacidad de Adopción Temporal",
+    "appointmentMetrics": "Métricas de Citas",
+    "appointmentsBooked": "Citas Reservadas",
+    "appointmentsCompleted": "Citas Completadas",
+    "language": "Idioma",
+    "edit": "Editar",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "saving": "Guardando...",
+    "none": "Ninguno",
+    "fosterTypes": {
+      "neonate": "Recién Nacido",
+      "medical": "Médico",
+      "shortTerm": "Corto Plazo",
+      "longTerm": "Largo Plazo",
+      "senior": "Mayor"
+    }
+  },
+  "home": {
+    "welcome": "¡Bienvenido {{name}}!",
+    "loading": "Cargando...",
+    "upcomingTitle": "Próximas citas",
+    "viewAll": "Ver todo",
+    "noUpcoming": "No hay próximas citas.",
+    "noSlotsBooked": "Sin cupos reservados"
+  },
+  "calendar": {
+    "months": {
+      "january": "Enero",
+      "february": "Febrero",
+      "march": "Marzo",
+      "april": "Abril",
+      "may": "Mayo",
+      "june": "Junio",
+      "july": "Julio",
+      "august": "Agosto",
+      "september": "Septiembre",
+      "october": "Octubre",
+      "november": "Noviembre",
+      "december": "Diciembre"
+    },
+    "weekdays": {
+      "sunday": "Domingo",
+      "monday": "Lunes",
+      "tuesday": "Martes",
+      "wednesday": "Miércoles",
+      "thursday": "Jueves",
+      "friday": "Viernes",
+      "saturday": "Sábado"
+    },
+    "weekdaysShort": {
+      "sun": "Dom",
+      "mon": "Lun",
+      "tue": "Mar",
+      "wed": "Mié",
+      "thu": "Jue",
+      "fri": "Vie",
+      "sat": "Sáb"
+    }
+  },
+  "confirmations": {
+    "confirmRelease": "Confirmar Liberación",
+    "confirmReleaseAll": "Confirmar Liberación de Todas",
+    "releaseAppointmentMessage": "¿Estás seguro de que quieres cancelar esta cita de <strong>{{serviceType}}</strong> para el <strong>{{date}}</strong>?",
+    "releaseAllMessage": "¿Estás seguro de que quieres eliminar <strong>todas las citas</strong> para el <strong>{{date}}</strong> en Street Cat Clinic? Esta acción no se puede deshacer.",
+    "yes": "Sí",
+    "no": "No"
+  },
+  "errors": {
+    "failedToLoad": "Error al cargar",
+    "tryAgain": "Inténtalo de nuevo",
+    "somethingWentWrong": "Algo salió mal",
+    "invalidDate": "Fecha inválida",
+    "noPermission": "No tienes permiso para acceder a esta página."
+  },
+  "common": {
+    "na": "N/D",
+    "loading": "Cargando",
+    "loadingMore": "Cargando más...",
+    "noResults": "No se encontraron resultados",
+    "cancel": "Cancelar",
+    "deleting": "Eliminando...",
+    "close": "Cerrar",
+    "confirm": "Confirmar",
+    "save": "Guardar",
+    "status": {
+      "completed": "Completado",
+      "canceled": "Cancelado",
+      "upcoming": "Próximo"
+    }
+  }
+}

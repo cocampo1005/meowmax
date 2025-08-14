@@ -1,0 +1,240 @@
+{
+  "nav": {
+    "home": "Home",
+    "appointments": "Appointments",
+    "accountsManager": "Accounts Manager",
+    "appointmentsManager": "Appointments Manager",
+    "book": "Book",
+    "profile": "Profile"
+  },
+  "aria": {
+    "nav": {
+      "home": "Go to Home",
+      "appointments": "Go to Appointments",
+      "profile": "Go to Profile"
+    }
+  },
+  "roles": {
+    "admin": "Admin",
+    "trapper": "Trapper",
+    "staff": "Staff",
+    "user": "User"
+  },
+  "accounts": {
+    "manageTitle": "Manage Accounts",
+    "addUser": "Add User",
+    "deleteUserTitle": "Delete User",
+    "deleteUserMessage": "Are you sure you want to delete this user account? This action cannot be undone.",
+    "sections": {
+      "contactInfo": "Contact Info:",
+      "trapperInfo": "Trapper Info:"
+    },
+    "table": {
+      "number": "Number",
+      "name": "Name",
+      "role": "Role",
+      "code": "Code",
+      "phone": "Phone",
+      "region": "Region",
+      "equipmentShort": "Eqpt"
+    },
+    "fields": {
+      "role": "Role",
+      "code": "Code",
+      "equipment": "Equipment",
+      "trapperRegion": "Trapper Region",
+      "recoverySpaceLimit": "Recovery Space Limit",
+      "fosterCapability": "Foster Capability"
+    },
+    "metrics": {
+      "title": "Performance Metrics:",
+      "edit": "Edit Metrics",
+      "commitmentScore": "Commitment Score",
+      "strikes": "Strikes",
+      "overbooked": "Appointments Overbooked",
+      "underbooked": "Appointments Underbooked"
+    },
+    "filters": {
+      "searchPlaceholder": "Search by Name or Number",
+      "equipmentMinPlaceholder": "Min Equipment Capacity",
+      "region": {
+        "label": "Region",
+        "all": "All Regions",
+        "broward": "Broward",
+        "miamiDade": "Miami-Dade"
+      },
+      "reset": "Reset Filters"
+    },
+    "noMetrics": "No performance metrics available."
+  },
+  "appointments": {
+    "title": "Appointments",
+    "upcoming": "Upcoming",
+    "history": "History",
+    "bookAppointment": "Book Appointment",
+    "manageTitle": "Manage Appointments",
+    "createNew": "Create New Appointment",
+    "forDate": "Appointments for {{date}}",
+    "selectDatePrompt": "Please select a date to view appointments",
+    "tnvrSectionTitle": "TNVR Appointments:",
+    "tnvrAppointment": "TNVR Appointment",
+    "noNotesProvided": "No notes provided.",
+    "releaseAllTnvrForPerson": "Release all TNVR for this person",
+    "noTnvrForDay": "No TNVR appointments for this day.",
+    "fosterSectionTitle": "Foster Appointments:",
+    "fosterAppointment": "Foster Appointment",
+    "noFosterForDay": "No Foster appointments for this day.",
+    "release": "Release",
+    "releaseAll": "Release all appointments for this date",
+    "none": "No {{view}} appointments.",
+    "date": "Date",
+    "serviceType": "Service",
+    "clinic": "Clinic",
+    "notes": "Notes",
+    "actions": "Actions",
+    "noneUpcoming": "No upcoming appointments.",
+    "noneHistory": "No past appointments.",
+    "showingFromTo": "Showing appointments from {{start}} to {{end}}",
+    "noSlotsBooked": "No slots booked",
+    "noEarlierFound": "No earlier appointments found"
+  },
+  "book": {
+    "title": "Book Appointment",
+    "tnvr": "TNVR",
+    "foster": "Foster",
+    "notes": "Notes (Optional):",
+    "booking": "Booking...",
+    "bookSlots": "Book Slots:",
+    "bookX": "Book {{count}} slot",
+    "bookX_plural": "Book {{count}} slots",
+    "confirmation": {
+      "title": "Appointment Booked!",
+      "title_plural": "Appointments Booked!",
+      "subtitle": "Your appointment is confirmed for:",
+      "subtitle_plural": "Your appointments are confirmed for:",
+      "bookedSlotsLabel": "Booked slot:",
+      "bookedSlotsLabel_plural": "Booked slots:"
+    },
+    "validation": {
+      "missingDateOrSlots": "Please select a date and at least one slot.",
+      "missingProfile": "Your profile is missing required information.",
+      "negativeSlots": "Number of slots cannot be negative.",
+      "overbooking": "You are trying to book more slots than available."
+    },
+    "fullyBooked": {
+      "title": "All slots have been fully booked for this day.",
+      "hint": "Please select another date or check back later for cancellations."
+    },
+    "availableSlotsHeader": "Available slots for {{date}} at {{clinic}}"
+  },
+  "days": {
+    "sun": "Sun",
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat"
+  },
+  "profile": {
+    "title": "Profile",
+    "logout": "Logout",
+    "yourInformation": "Your Information",
+    "email": "Email",
+    "phone": "Phone",
+    "address": "Address",
+    "regions": "Region(s)",
+    "equipmentCapacity": "Equipment Capacity",
+    "recoverySpaceLimit": "Recovery Space Limit",
+    "fosterCapability": "Foster Capability",
+    "appointmentMetrics": "Appointment Metrics",
+    "appointmentsBooked": "Appointments Booked",
+    "appointmentsCompleted": "Appointments Completed",
+    "language": "Language",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "none": "None",
+    "fosterTypes": {
+      "neonate": "Neonate",
+      "medical": "Medical",
+      "shortTerm": "Short Term",
+      "longTerm": "Long Term",
+      "senior": "Senior"
+    }
+  },
+  "home": {
+    "welcome": "Welcome {{name}}!",
+    "loading": "Loading...",
+    "upcomingTitle": "Upcoming appointments",
+    "viewAll": "View All",
+    "noUpcoming": "No upcoming appointments.",
+    "noSlotsBooked": "No slots booked"
+  },
+  "calendar": {
+    "months": {
+      "january": "January",
+      "february": "February",
+      "march": "March",
+      "april": "April",
+      "may": "May",
+      "june": "June",
+      "july": "July",
+      "august": "August",
+      "september": "September",
+      "october": "October",
+      "november": "November",
+      "december": "December"
+    },
+    "weekdays": {
+      "sunday": "Sunday",
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday"
+    },
+    "weekdaysShort": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    }
+  },
+  "confirmations": {
+    "confirmRelease": "Confirm Release",
+    "confirmReleaseAll": "Confirm Release All",
+    "releaseAppointmentMessage": "Are you sure you want to cancel this <strong>{{serviceType}}</strong> appointment for <strong>{{date}}</strong>?",
+    "releaseAllMessage": "Are you sure you want to delete <strong>all appointments</strong> for <strong>{{date}}</strong> at Street Cat Clinic? This action cannot be undone.",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "errors": {
+    "failedToLoad": "Failed to load",
+    "tryAgain": "Try again",
+    "somethingWentWrong": "Something went wrong",
+    "invalidDate": "Invalid Date",
+    "noPermission": "You do not have permission to access this page."
+  },
+  "common": {
+    "na": "N/A",
+    "loading": "Loading",
+    "loadingMore": "Loading more...",
+    "noResults": "No results found",
+    "close": "Close",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "save": "Save",
+    "deleting": "Deleting...",
+    "status": {
+      "completed": "Completed",
+      "canceled": "Canceled",
+      "upcoming": "Upcoming"
+    }
+  }
+}
