@@ -415,7 +415,7 @@ export default function AccountsManager() {
                       <button
                         onClick={handleEditMetricsClick}
                         disabled={!selectedUserId}
-                        className={`group p-2 rounded-lg flex items-center gap-0 transition-all duration-300 overflow-hidden ${
+                        className={`group cursor-pointer p-2 rounded-lg flex items-center gap-0 transition-all duration-300 overflow-hidden ${
                           selectedUserId
                             ? "bg-secondary-purple text-white hover:bg-accent-purple hover:gap-2 hover:px-3"
                             : "bg-gray-300 text-gray-500 cursor-not-allowed"
@@ -482,14 +482,14 @@ export default function AccountsManager() {
               <div className="hidden sm:flex flex-col justify-between items-end gap-4">
                 <button
                   onClick={() => setDeleteModalOpen(true)}
-                  className="text-secondary-purple hover:text-error-red transition-colors"
+                  className=" cursor-pointer text-secondary-purple hover:text-error-red transition-colors"
                   aria-label="Delete Account"
                 >
                   <Trash2 />
                 </button>
                 <button
                   onClick={() => handleEdit(selectedUserDetails)}
-                  className="text-secondary-purple hover:text-accent-purple transition-colors"
+                  className=" cursor-pointer text-secondary-purple hover:text-accent-purple transition-colors"
                   aria-label="Edit Account"
                 >
                   <SquarePen />

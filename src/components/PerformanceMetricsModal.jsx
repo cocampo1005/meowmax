@@ -42,7 +42,7 @@ export default function PerformanceMetricsModal({
 
   return (
     <div className="fixed inset-0 bg-slate-900/70 flex justify-center items-center z-100 p-4">
-      <div className="bg-primary-white rounded-3xl w-full max-w-xl text-primary-dark-purple max-h-[95vh] flex flex-col">
+      <div className="bg-primary-white rounded-3xl w-full max-w-xl text-primary-dark-purple max-h-[95svh] flex flex-col">
         {/* Header - Fixed */}
         <div className="px-6 sm:px-16 pt-6 sm:pt-12 pb-4 flex-shrink-0">
           <h2 className="text-2xl sm:text-3xl font-bold text-primary-dark-purple">
@@ -147,7 +147,7 @@ export default function PerformanceMetricsModal({
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
             <button
               onClick={onClose}
-              className="outline-button w-full sm:w-auto"
+              className="py-2 px-4 font-bold border-2 border-accent-purple text-accent-purple rounded-lg hover:bg-primary-light-purple w-full sm:w-auto"
             >
               Cancel
             </button>

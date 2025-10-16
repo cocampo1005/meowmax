@@ -125,7 +125,7 @@ export default function AccountModal({ isOpen, onClose, onSave, initialData }) {
 
   return (
     <div className="fixed inset-0 bg-slate-900/70 flex justify-center items-center z-100 p-4">
-      <div className="bg-primary-white rounded-3xl w-full max-w-xl text-primary-dark-purple max-h-[95vh] flex flex-col">
+      <div className="bg-primary-white rounded-3xl w-full max-w-xl text-primary-dark-purple max-h-[95svh] flex flex-col">
         {/* Header - Fixed */}
         <div className="flex items-center textaccent-purple gap-4 px-6 sm:px-16 pt-6 sm:pt-12 pb-4 flex-shrink-0">
           {initialData ? (
@@ -363,7 +363,7 @@ export default function AccountModal({ isOpen, onClose, onSave, initialData }) {
               <button
                 type="button"
                 onClick={onClose}
-                className="py-2 px-4 font-bold border-2 border-accent-purple text-accent-purple rounded-lg hover:bg-primary-light-purple w-full sm:w-auto"
+                className=" cursor-pointer py-2 px-4 font-bold border-2 border-accent-purple text-accent-purple rounded-lg hover:bg-primary-light-purple w-full sm:w-auto"
                 disabled={isSubmitting}
               >
                 Cancel
@@ -371,7 +371,7 @@ export default function AccountModal({ isOpen, onClose, onSave, initialData }) {
               <button
                 type="submit"
                 onClick={handleSubmit}
-                className={`bg-accent-purple text-primary-white px-4 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto ${
+                className={` cursor-pointer bg-accent-purple text-primary-white px-4 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto ${
                   isSubmitting
                     ? "opacity-50 cursor-not-allowed"
                     : "hover:bg-secondary-purple"

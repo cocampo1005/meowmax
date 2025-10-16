@@ -504,7 +504,7 @@ export default function AppointmentModal({
 
   return (
     <div className="fixed inset-0 bg-slate-900/70 flex justify-center items-center z-100 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[95vh] flex flex-col">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[95svh] flex flex-col">
         <div className="p-6 sm:p-8 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
           <h2 className="text-xl font-semibold text-primary-dark-purple">
             {modalTitle}
