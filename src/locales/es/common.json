@@ -4,6 +4,8 @@
     "appointments": "Citas",
     "accountsManager": "Gestor de Cuentas",
     "appointmentsManager": "Gestor de Citas",
+    "accounts": "Cuentas",
+    "manage": "Gestionar",
     "profile": "Perfil",
     "book": "Reservar"
   },
@@ -11,7 +13,9 @@
     "nav": {
       "home": "Ir al inicio",
       "appointments": "Ir a Citas",
-      "profile": "Ir al Perfil"
+      "profile": "Ir al Perfil",
+      "accounts": "Ir a Cuentas",
+      "manage": "Ir a Gestionar"
     }
   },
   "roles": {

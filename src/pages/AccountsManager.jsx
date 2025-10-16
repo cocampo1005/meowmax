@@ -334,143 +334,190 @@ export default function AccountsManager() {
 
       <section className="p-8 flex mb-16 md:mb-0 flex-col gap-8 overflow-y-auto md:max-h-[calc(100vh-10.5rem)]">
         {selectedUserDetails && (
-          <article className="rounded-xl flex justify-between flex-shrink-0 gap-8 px-8 p-4 bg-primary-light-purple text-primary-dark-purple">
-            <div>
-              <h2 className="text-2xl font-bold mb-4">
-                {selectedUserDetails.trapperNumber} -{" "}
-                {selectedUserDetails.firstName} {selectedUserDetails.lastName}
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">
-                    {t("accounts.sections.contactInfo")}
-                  </h3>
-                  <p>
-                    <strong>{t("profile.email")}:</strong>{" "}
-                    {selectedUserDetails.email}
-                  </p>
-                  <p>
-                    <strong>{t("accounts.fields.role")}:</strong>{" "}
-                    {roleLabel || t("common.na")}
-                  </p>
-                  <p>
-                    <strong>{t("profile.phone")}:</strong>{" "}
-                    {selectedUserDetails.phone
-                      ? formatPhoneNumber(selectedUserDetails.phone)
-                      : t("common.na")}
-                  </p>
-                  <p>
-                    <strong>{t("profile.address")}:</strong>{" "}
-                    {selectedUserDetails.address || t("common.na")}
-                  </p>
-                </div>
+          <article className="rounded-xl px-4 sm:px-8 py-4 sm:py-6 bg-primary-light-purple text-primary-dark-purple">
+            <div className="flex justify-between gap-4 sm:gap-8">
+              <div className="flex-1">
+                {/* Header */}
+                <h2 className="text-xl sm:text-2xl font-bold mb-4">
+                  {selectedUserDetails.trapperNumber} -{" "}
+                  {selectedUserDetails.firstName} {selectedUserDetails.lastName}
+                </h2>
 
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">
-                    {t("accounts.sections.trapperInfo")}
-                  </h3>
-                  <p>
-                    <strong>{t("accounts.fields.code")}:</strong>{" "}
-                    {selectedUserDetails.code}
-                  </p>
-                  <p>
-                    <strong>{t("accounts.fields.equipment")}:</strong>{" "}
-                    {selectedUserDetails.equipment ?? t("common.na")}
-                  </p>
-                  <p>
-                    <strong>{t("accounts.fields.trapperRegion")}:</strong>{" "}
-                    {regionDisplay}
-                  </p>
-                  <p>
-                    <strong>{t("accounts.fields.recoverySpaceLimit")}:</strong>{" "}
-                    {selectedUserDetails.recoverySpaceLimit ?? t("common.na")}
-                  </p>
-                  <p>
-                    <strong>{t("accounts.fields.fosterCapability")}:</strong>{" "}
-                    {fosterLabels || t("profile.none")}
-                  </p>
-                </div>
-
-                {/* Performance Metrics */}
-                <div>
-                  <div className="flex items-center gap-4">
-                    <h3 className="text-xl font-semibold mb-2">
-                      {t("accounts.metrics.title")}
+                {/* Content Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-10">
+                  {/* Contact Info */}
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-semibold mb-3 text-accent-purple">
+                      {t("accounts.sections.contactInfo")}
                     </h3>
-                    <button
-                      onClick={handleEditMetricsClick}
-                      disabled={!selectedUserId}
-                      className={`px-3 py-1 text-sm rounded-lg flex gap-2 items-center ${
-                        selectedUserId
-                          ? "bg-secondary-purple text-white hover:cursor-pointer hover:bg-accent-purple"
-                          : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      }`}
-                      aria-label={t("accounts.metrics.edit")}
-                      title={t("accounts.metrics.edit")}
-                    >
-                      <ChartSpline className="w-4 h-4" />
-                      {t("accounts.metrics.edit")}
-                    </button>
+                    <div className="space-y-2 text-sm sm:text-base">
+                      <p>
+                        <strong>{t("profile.email")}:</strong>{" "}
+                        {selectedUserDetails.email}
+                      </p>
+                      <p>
+                        <strong>{t("accounts.fields.role")}:</strong>{" "}
+                        {roleLabel || t("common.na")}
+                      </p>
+                      <p>
+                        <strong>{t("profile.phone")}:</strong>{" "}
+                        {selectedUserDetails.phone
+                          ? formatPhoneNumber(selectedUserDetails.phone)
+                          : t("common.na")}
+                      </p>
+                      <p>
+                        <strong>{t("profile.address")}:</strong>{" "}
+                        {selectedUserDetails.address || t("common.na")}
+                      </p>
+                    </div>
                   </div>
 
-                  {selectedUserDetails.performanceMetrics ? (
-                    <>
+                  {/* Trapper Info */}
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-semibold mb-3 text-accent-purple">
+                      {t("accounts.sections.trapperInfo")}
+                    </h3>
+                    <div className="space-y-2 text-sm sm:text-base">
+                      <p>
+                        <strong>{t("accounts.fields.code")}:</strong>{" "}
+                        {selectedUserDetails.code}
+                      </p>
+                      <p>
+                        <strong>{t("accounts.fields.equipment")}:</strong>{" "}
+                        {selectedUserDetails.equipment ?? t("common.na")}
+                      </p>
+                      <p>
+                        <strong>{t("accounts.fields.trapperRegion")}:</strong>{" "}
+                        {regionDisplay}
+                      </p>
                       <p>
                         <strong>
-                          {t("accounts.metrics.commitmentScore")}:
+                          {t("accounts.fields.recoverySpaceLimit")}:
                         </strong>{" "}
-                        {selectedUserDetails.performanceMetrics
-                          .commitmentScore || 0}
+                        {selectedUserDetails.recoverySpaceLimit ??
+                          t("common.na")}
                       </p>
                       <p>
-                        <strong>{t("accounts.metrics.strikes")}:</strong>{" "}
-                        {selectedUserDetails.performanceMetrics.strikes || 0}
+                        <strong>
+                          {t("accounts.fields.fosterCapability")}:
+                        </strong>{" "}
+                        {fosterLabels || t("profile.none")}
                       </p>
-                      <p>
-                        <strong>{t("profile.appointmentsBooked")}:</strong>{" "}
-                        {selectedUserDetails.performanceMetrics
-                          .totalAppointmentsBooked || 0}
-                      </p>
-                      <p>
-                        <strong>{t("profile.appointmentsCompleted")}:</strong>{" "}
-                        {selectedUserDetails.performanceMetrics
-                          .totalAppointmentsCompleted || 0}
-                      </p>
-                      <p>
-                        <strong>{t("accounts.metrics.overbooked")}:</strong>{" "}
-                        {selectedUserDetails.performanceMetrics
-                          .totalAppointmentsOverBooked || 0}
-                      </p>
-                      <p>
-                        <strong>{t("accounts.metrics.underbooked")}:</strong>{" "}
-                        {selectedUserDetails.performanceMetrics
-                          .totalAppointmentsUnderBooked || 0}
-                      </p>
-                    </>
-                  ) : (
-                    <p>{t("accounts.noMetrics")}</p>
-                  )}
+                    </div>
+                  </div>
+
+                  {/* Performance Metrics */}
+                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <h3 className="text-lg sm:text-xl font-semibold text-accent-purple">
+                        {t("accounts.metrics.title")}
+                      </h3>
+                      <button
+                        onClick={handleEditMetricsClick}
+                        disabled={!selectedUserId}
+                        className={`group p-2 rounded-lg flex items-center gap-0 transition-all duration-300 overflow-hidden ${
+                          selectedUserId
+                            ? "bg-secondary-purple text-white hover:bg-accent-purple hover:gap-2 hover:px-3"
+                            : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        }`}
+                        aria-label={t("accounts.metrics.edit")}
+                        title={t("accounts.metrics.edit")}
+                      >
+                        <ChartSpline className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm font-medium max-w-0 group-hover:max-w-xs transition-all duration-300 whitespace-nowrap overflow-hidden">
+                          {t("accounts.metrics.edit")}
+                        </span>
+                      </button>
+                    </div>
+
+                    <div className="space-y-2 text-sm sm:text-base">
+                      {selectedUserDetails.performanceMetrics ? (
+                        <>
+                          <p>
+                            <strong>
+                              {t("accounts.metrics.commitmentScore")}:
+                            </strong>{" "}
+                            {selectedUserDetails.performanceMetrics
+                              .commitmentScore || 0}
+                          </p>
+                          <p>
+                            <strong>{t("accounts.metrics.strikes")}:</strong>{" "}
+                            {selectedUserDetails.performanceMetrics.strikes ||
+                              0}
+                          </p>
+                          <p>
+                            <strong>{t("profile.appointmentsBooked")}:</strong>{" "}
+                            {selectedUserDetails.performanceMetrics
+                              .totalAppointmentsBooked || 0}
+                          </p>
+                          <p>
+                            <strong>
+                              {t("profile.appointmentsCompleted")}:
+                            </strong>{" "}
+                            {selectedUserDetails.performanceMetrics
+                              .totalAppointmentsCompleted || 0}
+                          </p>
+                          <p>
+                            <strong>{t("accounts.metrics.overbooked")}:</strong>{" "}
+                            {selectedUserDetails.performanceMetrics
+                              .totalAppointmentsOverBooked || 0}
+                          </p>
+                          <p>
+                            <strong>
+                              {t("accounts.metrics.underbooked")}:
+                            </strong>{" "}
+                            {selectedUserDetails.performanceMetrics
+                              .totalAppointmentsUnderBooked || 0}
+                          </p>
+                        </>
+                      ) : (
+                        <p>{t("accounts.noMetrics")}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
+              </div>
+
+              {/* Desktop Action Buttons - Right side */}
+              <div className="hidden sm:flex flex-col justify-between items-end gap-4">
+                <button
+                  onClick={() => setDeleteModalOpen(true)}
+                  className="text-secondary-purple hover:text-error-red transition-colors"
+                  aria-label="Delete Account"
+                >
+                  <Trash2 />
+                </button>
+                <button
+                  onClick={() => handleEdit(selectedUserDetails)}
+                  className="text-secondary-purple hover:text-accent-purple transition-colors"
+                  aria-label="Edit Account"
+                >
+                  <SquarePen />
+                </button>
               </div>
             </div>
 
-            <div className="flex flex-col justify-between items-end gap-4">
-              <button
-                onClick={() => setDeleteModalOpen(true)}
-                className="text-secondary-purple hover:cursor-pointer hover:text-error-red"
-              >
-                <Trash2 />
-              </button>
+            {/* Mobile Action Buttons - Fixed at bottom */}
+            <div className="flex sm:hidden gap-3 pt-4 border-t border-accent-purple/20">
               <button
                 onClick={() => handleEdit(selectedUserDetails)}
-                className="text-secondary-purple hover:cursor-pointer hover:text-accent-purple"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-secondary-purple text-white rounded-lg hover:bg-accent-purple transition-colors"
+                aria-label="Edit Account"
               >
-                <SquarePen />
+                <SquarePen className="w-4 h-4" />
+                <span className="text-sm font-medium">Edit</span>
+              </button>
+              <button
+                onClick={() => setDeleteModalOpen(true)}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-error-red text-white rounded-lg hover:bg-red-700 transition-colors"
+                aria-label="Delete Account"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span className="text-sm font-medium">Delete</span>
               </button>
             </div>
           </article>
         )}
-
         {/* Filter Inputs */}
         <div className="space-y-3 md:space-y-0 md:flex md:gap-4">
           {/* Search Input */}

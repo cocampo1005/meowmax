@@ -4,6 +4,8 @@
     "appointments": "Appointments",
     "accountsManager": "Accounts Manager",
     "appointmentsManager": "Appointments Manager",
+    "accounts": "Accounts",
+    "manage": "Manage",
     "book": "Book",
     "profile": "Profile"
   },
@@ -11,7 +13,9 @@
     "nav": {
       "home": "Go to Home",
       "appointments": "Go to Appointments",
-      "profile": "Go to Profile"
+      "profile": "Go to Profile",
+      "accounts": "Go to Accounts",
+      "manage": "Go to Manage"
     }
   },
   "roles": {

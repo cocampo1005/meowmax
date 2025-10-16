@@ -503,9 +503,9 @@ export default function AppointmentModal({
     alreadyBookedFosterSlots + fosterSlotsToBook;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/70 flex justify-center items-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] mb-16 overflow-y-auto transform transition-all sm:my-8 sm:w-full">
-        <div className="p-8 border-b border-gray-200 flex justify-between items-center">
+    <div className="fixed inset-0 bg-slate-900/70 flex justify-center items-center z-100 p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[95vh] flex flex-col">
+        <div className="p-6 sm:p-8 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
           <h2 className="text-xl font-semibold text-primary-dark-purple">
             {modalTitle}
           </h2>
@@ -530,71 +530,72 @@ export default function AppointmentModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Calendar Section */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold text-accent-purple mb-4">
-              Select Date
-            </h3>
-            <div className="flex justify-between items-center mb-4">
-              <button
-                type="button"
-                onClick={goToPreviousMonth}
-                className="p-2 rounded-full hover:bg-gray-200"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <h4 className="text-lg font-bold text-accent-purple">
-                {currentMonth.toLocaleString("default", {
-                  month: "long",
-                  year: "numeric",
-                })}
-              </h4>
-              <button
-                type="button"
-                onClick={goToNextMonth}
-                className="p-2 rounded-full hover:bg-gray-200"
-              >
-                <ChevronRight size={20} />
-              </button>
-            </div>
-            <div className="grid grid-cols-7 text-center text-sm font-medium mb-2">
-              <div>Sun</div>
-              <div>Mon</div>
-              <div>Tue</div>
-              <div>Wed</div>
-              <div>Thu</div>
-              <div>Fri</div>
-              <div>Sat</div>
-            </div>
-            <div className="grid grid-cols-7 gap-1 text-center">
-              {calendarDays.map((day, index) => {
-                const date =
-                  day !== null
-                    ? new Date(
-                        currentMonth.getFullYear(),
-                        currentMonth.getMonth(),
-                        day
-                      )
-                    : null;
-                const isSelected =
-                  selectedDate &&
-                  date &&
-                  date.toDateString() === selectedDate.toDateString();
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const isPastDate = date && date < today;
-                const dayOfWeek = date ? date.getDay() : null;
-                const isClinicClosed =
-                  dayOfWeek === 4 || dayOfWeek === 5 || dayOfWeek === 6; // Thursday, Friday, Saturday
+        <div className="overflow-y-auto flex-1">
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {/* Calendar Section */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="text-lg font-semibold text-accent-purple mb-4">
+                Select Date
+              </h3>
+              <div className="flex justify-between items-center mb-4">
+                <button
+                  type="button"
+                  onClick={goToPreviousMonth}
+                  className="p-2 rounded-full hover:bg-gray-200"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <h4 className="text-lg font-bold text-accent-purple">
+                  {currentMonth.toLocaleString("default", {
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </h4>
+                <button
+                  type="button"
+                  onClick={goToNextMonth}
+                  className="p-2 rounded-full hover:bg-gray-200"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+              <div className="grid grid-cols-7 text-center text-sm font-medium mb-2">
+                <div>Sun</div>
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
+              </div>
+              <div className="grid grid-cols-7 gap-1 text-center">
+                {calendarDays.map((day, index) => {
+                  const date =
+                    day !== null
+                      ? new Date(
+                          currentMonth.getFullYear(),
+                          currentMonth.getMonth(),
+                          day
+                        )
+                      : null;
+                  const isSelected =
+                    selectedDate &&
+                    date &&
+                    date.toDateString() === selectedDate.toDateString();
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const isPastDate = date && date < today;
+                  const dayOfWeek = date ? date.getDay() : null;
+                  const isClinicClosed =
+                    dayOfWeek === 4 || dayOfWeek === 5 || dayOfWeek === 6; // Thursday, Friday, Saturday
 
-                const isDisabled =
-                  !isEditMode && (isPastDate || isClinicClosed); // Only disable for create mode
+                  const isDisabled =
+                    !isEditMode && (isPastDate || isClinicClosed); // Only disable for create mode
 
-                return (
-                  <div
-                    key={index}
-                    className={`p-2 rounded relative
+                  return (
+                    <div
+                      key={index}
+                      className={`p-2 rounded relative
                       ${day === null ? "bg-gray-100" : ""}
                       ${
                         isDisabled
@@ -616,225 +617,242 @@ export default function AppointmentModal({
                           : ""
                       }
                     `}
-                    onClick={() => !isDisabled && handleDaySelect(day)}
-                  >
-                    {day}
-                  </div>
-                );
-              })}
+                      onClick={() => !isDisabled && handleDaySelect(day)}
+                    >
+                      {day}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          {/* Trapper Selection */}
-          <div className="flex flex-col mb-4">
-            <label
-              htmlFor="trapperSelect"
-              className="text-lg font-semibold text-accent-purple mb-2"
-            >
-              Select Trapper for Appointment:
-            </label>
-            {loadingUsers ? (
-              <LoadingSpinner size="sm" />
-            ) : (
-              <select
-                id="trapperSelect"
-                className="input"
-                value={selectedUserId}
-                onChange={handleUserSelect}
-                required
-                disabled={isEditMode} // Disable selection in edit mode as trapper is fixed
+            {/* Trapper Selection */}
+            <div className="flex flex-col mb-4">
+              <label
+                htmlFor="trapperSelect"
+                className="text-lg font-semibold text-accent-purple mb-2"
               >
-                <option value="">-- Select a Trapper --</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.trapperNumber} - {user.firstName} {user.lastName}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          {/* Slot Details */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-accent-purple mb-2">
-              Slot Details:
-            </h3>
-
-            {loadingSlots ? (
-              <LoadingSpinner />
-            ) : (
-              <>
-                {/* TNVR Slots */}
-                <div className="flex items-center gap-4">
-                  <label htmlFor="tnvr-slots" className="w-14 font-semibold">
-                    TNVR:
-                  </label>
-                  <input
-                    id="tnvr-slots"
-                    type="number"
-                    min="0"
-                    max={
-                      isEditMode
-                        ? 1
-                        : dailyCapacity.tnvr > 0
-                        ? availableSlots.tnvr
-                        : 100 // If no capacity set, allow up to 100
-                    }
-                    value={tnvrSlotsToBook}
-                    onFocus={(e) => e.target.select()}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value) || 0;
-                      if (isEditMode) {
-                        setTnvrSlotsToBook(Math.min(1, Math.max(0, value)));
-                        if (value === 1) setFosterSlotsToBook(0);
-                      } else {
-                        // If capacity is set (> 0), respect the available slots limit
-                        // If no capacity is set, just use a reasonable upper limit
-                        const maxAllowed =
-                          dailyCapacity.tnvr > 0 ? availableSlots.tnvr : 100;
-                        setTnvrSlotsToBook(
-                          Math.max(0, Math.min(maxAllowed, value))
-                        );
-                      }
-                    }}
-                    className="w-16 p-2 border rounded-lg outline-none border-tertiary-purple focus:border-accent-purple text-center"
-                    disabled={
-                      isEditMode && appointment?.serviceType === "Foster"
-                    } // Disable if editing a Foster appointment
-                  />
-                  {/* Progress Bar and Count */}
-                  <div className="flex items-center flex-grow">
-                    <div className="w-full h-4 bg-gray-200 rounded-l-full overflow-hidden">
-                      <div
-                        className="h-full bg-accent-purple transition-all duration-300 ease-in-out"
-                        style={{
-                          width: `${
-                            dailyCapacity.tnvr > 0
-                              ? (displayedTotalBookedTnvr /
-                                  dailyCapacity.tnvr) *
-                                100
-                              : displayedTotalBookedTnvr > 0
-                              ? 100
-                              : 0
-                          }%`,
-                        }}
-                      ></div>
-                    </div>
-                    <span className="px-2 py-1 rounded-md bg-accent-purple text-primary-white font-semibold text-sm">
-                      {displayedTotalBookedTnvr}
-                      {dailyCapacity.tnvr > 0 ? `/${dailyCapacity.tnvr}` : ""}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Foster Slots */}
-                <div className="flex items-center gap-4">
-                  <label htmlFor="foster-slots" className="w-14 font-semibold">
-                    Foster:
-                  </label>
-                  <input
-                    id="foster-slots"
-                    type="number"
-                    min="0"
-                    max={
-                      isEditMode
-                        ? 1
-                        : dailyCapacity.foster > 0
-                        ? availableSlots.foster
-                        : 100 // If no capacity set, allow up to 100
-                    }
-                    value={fosterSlotsToBook}
-                    onFocus={(e) => e.target.select()}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value) || 0;
-                      if (isEditMode) {
-                        setFosterSlotsToBook(Math.min(1, Math.max(0, value)));
-                        if (value === 1) setTnvrSlotsToBook(0);
-                      } else {
-                        // If capacity is set (> 0), respect the available slots limit
-                        // If no capacity is set, just use a reasonable upper limit
-                        const maxAllowed =
-                          dailyCapacity.foster > 0
-                            ? availableSlots.foster
-                            : 100;
-                        setFosterSlotsToBook(
-                          Math.max(0, Math.min(maxAllowed, value))
-                        );
-                      }
-                    }}
-                    className="w-16 p-2 border rounded-lg outline-none border-tertiary-purple focus:border-accent-purple text-center"
-                    disabled={isEditMode && appointment?.serviceType === "TNVR"} // Disable if editing a TNVR appointment
-                  />
-                  {/* Progress Bar and Count */}
-                  <div className="flex items-center flex-grow">
-                    <div className="w-full h-4 bg-gray-200 rounded-l-full overflow-hidden">
-                      <div
-                        className="h-full bg-accent-purple transition-all duration-300 ease-in-out"
-                        style={{
-                          width: `${
-                            dailyCapacity.foster > 0
-                              ? (displayedTotalBookedFoster /
-                                  dailyCapacity.foster) *
-                                100
-                              : displayedTotalBookedFoster > 0
-                              ? 100
-                              : 0
-                          }%`,
-                        }}
-                      ></div>
-                    </div>
-                    <span className="px-2 py-1 rounded-md bg-accent-purple text-primary-white font-semibold text-sm">
-                      {displayedTotalBookedFoster}
-                      {dailyCapacity.foster > 0
-                        ? `/${dailyCapacity.foster}`
-                        : ""}
-                    </span>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Notes */}
-          <div>
-            <label htmlFor="notes" className="form-label mb-2 block">
-              Notes (Optional):
-            </label>
-            <textarea
-              id="notes"
-              className="input w-full resize-none"
-              rows="3"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            ></textarea>
-          </div>
-
-          {/* Metadata */}
-          {isEditMode && appointment && (
-            <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-700">
-              <h3 className="font-semibold mb-2">Booking Information:</h3>
-              <p>
-                Booked by: {createdByUserName || "N/A"} on{" "}
-                {appointment.createdAt?.toDate().toLocaleString()}
-              </p>
-              <p>
-                Last Modified by: {lastModifiedByUserName || "N/A"} on{" "}
-                {appointment.updatedAt?.toDate().toLocaleString()}
-              </p>
+                Select Trapper for Appointment:
+              </label>
+              {loadingUsers ? (
+                <LoadingSpinner size="sm" />
+              ) : (
+                <select
+                  id="trapperSelect"
+                  className="input"
+                  value={selectedUserId}
+                  onChange={handleUserSelect}
+                  required
+                  disabled={isEditMode} // Disable selection in edit mode as trapper is fixed
+                >
+                  <option value="">-- Select a Trapper --</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.trapperNumber} - {user.firstName} {user.lastName}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
-          )}
 
-          {error && <div className="text-red-500 text-center">{error}</div>}
+            {/* Slot Details */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-accent-purple mb-2">
+                Slot Details:
+              </h3>
 
-          <div className="flex justify-end gap-3">
-            <button type="button" onClick={onClose} className="outline-button">
+              {loadingSlots ? (
+                <LoadingSpinner />
+              ) : (
+                <>
+                  {/* TNVR Slots */}
+                  <div className="flex items-center gap-4">
+                    <label htmlFor="tnvr-slots" className="w-14 font-semibold">
+                      TNVR:
+                    </label>
+                    <input
+                      id="tnvr-slots"
+                      type="number"
+                      min="0"
+                      max={
+                        isEditMode
+                          ? 1
+                          : dailyCapacity.tnvr > 0
+                          ? availableSlots.tnvr
+                          : 100 // If no capacity set, allow up to 100
+                      }
+                      value={tnvrSlotsToBook}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 0;
+                        if (isEditMode) {
+                          setTnvrSlotsToBook(Math.min(1, Math.max(0, value)));
+                          if (value === 1) setFosterSlotsToBook(0);
+                        } else {
+                          // If capacity is set (> 0), respect the available slots limit
+                          // If no capacity is set, just use a reasonable upper limit
+                          const maxAllowed =
+                            dailyCapacity.tnvr > 0 ? availableSlots.tnvr : 100;
+                          setTnvrSlotsToBook(
+                            Math.max(0, Math.min(maxAllowed, value))
+                          );
+                        }
+                      }}
+                      className="w-16 p-2 border rounded-lg outline-none border-tertiary-purple focus:border-accent-purple text-center"
+                      disabled={
+                        isEditMode && appointment?.serviceType === "Foster"
+                      } // Disable if editing a Foster appointment
+                    />
+                    {/* Progress Bar and Count */}
+                    <div className="flex items-center flex-grow">
+                      <div className="w-full h-4 bg-gray-200 rounded-l-full overflow-hidden">
+                        <div
+                          className="h-full bg-accent-purple transition-all duration-300 ease-in-out"
+                          style={{
+                            width: `${
+                              dailyCapacity.tnvr > 0
+                                ? (displayedTotalBookedTnvr /
+                                    dailyCapacity.tnvr) *
+                                  100
+                                : displayedTotalBookedTnvr > 0
+                                ? 100
+                                : 0
+                            }%`,
+                          }}
+                        ></div>
+                      </div>
+                      <span className="px-2 py-1 rounded-md bg-accent-purple text-primary-white font-semibold text-sm">
+                        {displayedTotalBookedTnvr}
+                        {dailyCapacity.tnvr > 0 ? `/${dailyCapacity.tnvr}` : ""}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Foster Slots */}
+                  <div className="flex items-center gap-4">
+                    <label
+                      htmlFor="foster-slots"
+                      className="w-14 font-semibold"
+                    >
+                      Foster:
+                    </label>
+                    <input
+                      id="foster-slots"
+                      type="number"
+                      min="0"
+                      max={
+                        isEditMode
+                          ? 1
+                          : dailyCapacity.foster > 0
+                          ? availableSlots.foster
+                          : 100 // If no capacity set, allow up to 100
+                      }
+                      value={fosterSlotsToBook}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 0;
+                        if (isEditMode) {
+                          setFosterSlotsToBook(Math.min(1, Math.max(0, value)));
+                          if (value === 1) setTnvrSlotsToBook(0);
+                        } else {
+                          // If capacity is set (> 0), respect the available slots limit
+                          // If no capacity is set, just use a reasonable upper limit
+                          const maxAllowed =
+                            dailyCapacity.foster > 0
+                              ? availableSlots.foster
+                              : 100;
+                          setFosterSlotsToBook(
+                            Math.max(0, Math.min(maxAllowed, value))
+                          );
+                        }
+                      }}
+                      className="w-16 p-2 border rounded-lg outline-none border-tertiary-purple focus:border-accent-purple text-center"
+                      disabled={
+                        isEditMode && appointment?.serviceType === "TNVR"
+                      } // Disable if editing a TNVR appointment
+                    />
+                    {/* Progress Bar and Count */}
+                    <div className="flex items-center flex-grow">
+                      <div className="w-full h-4 bg-gray-200 rounded-l-full overflow-hidden">
+                        <div
+                          className="h-full bg-accent-purple transition-all duration-300 ease-in-out"
+                          style={{
+                            width: `${
+                              dailyCapacity.foster > 0
+                                ? (displayedTotalBookedFoster /
+                                    dailyCapacity.foster) *
+                                  100
+                                : displayedTotalBookedFoster > 0
+                                ? 100
+                                : 0
+                            }%`,
+                          }}
+                        ></div>
+                      </div>
+                      <span className="px-2 py-1 rounded-md bg-accent-purple text-primary-white font-semibold text-sm">
+                        {displayedTotalBookedFoster}
+                        {dailyCapacity.foster > 0
+                          ? `/${dailyCapacity.foster}`
+                          : ""}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label htmlFor="notes" className="form-label mb-2 block">
+                Notes (Optional):
+              </label>
+              <textarea
+                id="notes"
+                className="input w-full resize-none"
+                rows="3"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              ></textarea>
+            </div>
+
+            {/* Metadata */}
+            {isEditMode && appointment && (
+              <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-700">
+                <h3 className="font-semibold mb-2">Booking Information:</h3>
+                <p>
+                  Booked by: {createdByUserName || "N/A"} on{" "}
+                  {appointment.createdAt?.toDate().toLocaleString()}
+                </p>
+                <p>
+                  Last Modified by: {lastModifiedByUserName || "N/A"} on{" "}
+                  {appointment.updatedAt?.toDate().toLocaleString()}
+                </p>
+              </div>
+            )}
+
+            {error && <div className="text-red-500 text-center">{error}</div>}
+          </form>
+        </div>
+        {/* Footer - Fixed */}
+        <div className="px-6 py-4 sm:py-6 border-t border-gray-200 flex-shrink-0">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="outline-button w-full sm:w-auto"
+            >
               Cancel
             </button>
-            <button type="submit" className="button mt-4" disabled={loading}>
+            <button
+              type="submit"
+              onClick={handleSubmit}
+              className="button w-full sm:w-auto"
+              disabled={loading}
+            >
               {loading ? <LoadingSpinner size="sm" /> : saveButtonText}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
