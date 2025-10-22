@@ -672,7 +672,7 @@ export default function AppointmentsManager() {
                       return (
                         <div
                           key={group.groupKey}
-                          className="bg-white rounded-lg shadow-md p-4"
+                          className="bg-white rounded-lg shadow-md p-4 self-start"
                         >
                           <div
                             className="flex justify-between items-center cursor-pointer"
@@ -865,7 +865,7 @@ export default function AppointmentsManager() {
                       return (
                         <div
                           key={group.groupKey}
-                          className="bg-white rounded-lg shadow-md p-4"
+                          className="bg-white rounded-lg shadow-md p-4 self-start"
                         >
                           <div
                             className="flex justify-between items-center cursor-pointer"

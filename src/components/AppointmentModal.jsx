@@ -846,7 +846,7 @@ export default function AppointmentModal({
             <button
               type="submit"
               onClick={handleSubmit}
-              className="button w-full sm:w-auto"
+              className="button w-full sm:w-auto mt-4"
               disabled={loading}
             >
               {loading ? <LoadingSpinner size="sm" /> : saveButtonText}
